@@ -22,7 +22,7 @@ For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: se
 ## Requirements
 
 ### Software
-- **Python 3.10** (3.9+ should work; developed and tested on 3.10.9 with Anaconda).
+- **Python 3.10** (3.9+ should work; developed and tested on 3.10.9).
 - **R 4.0 or newer** (tested on R 4.2.3). R is required — the application does not run in a "no-R" mode.
 
 ### Python packages
