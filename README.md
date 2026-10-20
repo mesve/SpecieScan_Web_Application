@@ -4,7 +4,7 @@ A browser-based application for **ZooMS** (Zooarchaeology by Mass Spectrometry) 
 
 All spectra shown in the interface are the real data loaded from your files — there is no simulated/synthetic fallback.
 
-For more information please read Végh, B. & Douka, K. (2023). SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS. Bioinformatics 40(2), 1–12. DOI: 10.1093/bioinformatics/btae054
+For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS. Bioinformatics 40(2), btae054. DOI: 10.1093/bioinformatics/btae054
 
 ---
 
@@ -231,11 +231,13 @@ python test_app.py          # smoke test
 
 If you use SpecieScan in your research, please cite:
 
-> Végh, B. & Douka, K. (2023). *SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS.* Bioinformatics 40(2), 1–12. DOI: [10.1093/bioinformatics/btae054](https://doi.org/10.1093/bioinformatics/btae054)
+> Végh, E. I. & Douka, K. (2024). *SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS.* Bioinformatics, 40(2), btae054. DOI: [10.1093/bioinformatics/btae054](https://doi.org/10.1093/bioinformatics/btae054)
 
-and the code archive:
+Please also cite the web application and the underlying algorithm code archive:
 
-> DOI: [10.5281/zenodo.8055426](https://doi.org/10.5281/zenodo.8055426)
+> Web application DOI: [10.5281/zenodo.23495280](https://doi.org/10.5281/zenodo.23495280)
+
+> Algorithm DOI: [10.5281/zenodo.8055426](https://doi.org/10.5281/zenodo.8055426)
 
 A machine-readable citation is provided in [`CITATION.cff`](CITATION.cff).
 

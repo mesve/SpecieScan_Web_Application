@@ -93,12 +93,65 @@ h1, h2, h3, h4, h5, h6 {
     padding: 48px 0 0;
     background-color: var(--specie-surface);
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-header {
+    flex: 0 0 auto;
+    padding: 0 0.5rem 0.75rem;
+    background-color: var(--specie-surface);
+}
+
+.sidebar-steps {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 0.5rem 1rem;
 }
 
 .sidebar h4 {
     color: #FFFFFF;
     font-weight: 700;
     letter-spacing: 0.4px;
+}
+
+.sidebar-docs {
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--specie-muted-on-dark);
+    padding: 0 0.25rem 0.75rem;
+    margin: 0 0 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    overflow-wrap: anywhere;
+}
+
+.sidebar-docs a {
+    color: #E9F3E4;
+    text-decoration: underline;
+    text-underline-offset: 1px;
+}
+
+.sidebar-docs a:hover {
+    color: #FFFFFF;
+}
+
+.sidebar-docs em {
+    color: #FFFFFF;
+    font-style: italic;
+}
+
+.sidebar-cite {
+    margin-top: 0.55rem;
+}
+
+.sidebar-cite-title {
+    display: block;
+    color: #FFFFFF;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
 }
 
 .sidebar .nav-link {
@@ -674,6 +727,12 @@ main {
         position: static;
         height: auto;
         padding: 1rem 0;
+        display: block;
+        overflow: visible;
+    }
+
+    .sidebar-steps {
+        overflow: visible;
     }
 
     main {
