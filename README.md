@@ -257,5 +257,6 @@ Dr Emese Végh — [mesve3@gmail.com](mailto:mesve3@gmail.com)
 
 ## Acknowledgments
 
+- Much of the pre-processing steps of the code was adapted from Codlin MC, Douka K, Richter KK (2022). An application of zooms to identify archaeological avian fauna from Teotihuacan, Mexico. Journal of Archaeological Science;148:105692.
 - The MALDIquant and MALDIquantForeign developers for the R mass-spectrometry packages.
 - Plotly.js, Bootstrap and Font Awesome for the interactive interface.
