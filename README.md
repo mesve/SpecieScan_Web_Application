@@ -4,7 +4,7 @@ A browser-based application for **ZooMS** (Zooarchaeology by Mass Spectrometry) 
 
 All spectra shown in the interface are the real data loaded from your files — there is no simulated/synthetic fallback.
 
-For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS. Bioinformatics 40(2), btae054. DOI: 10.1093/bioinformatics/btae054
+For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS. Bioinformatics 40(2), 1–12. DOI: 10.1093/bioinformatics/btae054
 
 ---
 
@@ -231,7 +231,7 @@ python test_app.py          # smoke test
 
 If you use SpecieScan in your research, please cite:
 
-> Végh, E. I. & Douka, K. (2024). *SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS.* Bioinformatics, 40(2), btae054. DOI: [10.1093/bioinformatics/btae054](https://doi.org/10.1093/bioinformatics/btae054)
+> Végh, E. I. & Douka, K. (2024). *SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS.* Bioinformatics, 40(2), 1–12. DOI: [10.1093/bioinformatics/btae054](https://doi.org/10.1093/bioinformatics/btae054)
 
 Please also cite the web application and the underlying algorithm code archive:
 
