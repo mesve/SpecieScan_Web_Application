@@ -1,0 +1,704 @@
+/* SpecieScan Web Application Styles
+ * Palette:
+ *   page background : #9DC88D
+ *   main text       : #FFFFFF
+ *   option boxes    : #4D774E
+ *   selected        : #164A41
+ *   chart panels    : #F4F9F1 (dark green text/lines)
+ */
+
+:root {
+    /* SpecieScan palette */
+    --specie-text: #FFFFFF;
+    --specie-bg: #9DC88D;
+    --specie-box: #4D774E;
+    --specie-box-hover: #5C8A5D;
+    --specie-selected: #164A41;
+    --specie-selected-hover: #1D5C51;
+    --specie-surface: #3F6340;
+    --specie-ring: #C7E3B9;
+    --specie-muted-on-light: rgba(22, 74, 65, 0.78);
+    --specie-muted-on-dark: rgba(255, 255, 255, 0.82);
+    --specie-border-on-dark: rgba(255, 255, 255, 0.18);
+
+    /* Chart palette (light panels) */
+    --chart-bg: #F4F9F1;
+    --chart-text: #164A41;
+    --chart-grid: #C9DEC1;
+    --chart-line: #4D774E;
+    --chart-accent: #164A41;
+    --chart-highlight: #9DC88D;
+    --chart-threshold: #B7791F;
+    --chart-danger: #9B3B3B;
+    --chart-success: #2F7D5E;
+
+    /* Functional colours */
+    --specie-success: #2F7D5E;
+    --specie-warning: #9A6508;
+    --specie-danger: #9B3B3B;
+    --specie-info: #2F6B5E;
+
+    /* Bootstrap variable overrides so existing utility classes adopt the palette */
+    --bs-body-bg: var(--specie-bg);
+    --bs-body-color: var(--specie-selected);
+    --bs-emphasis-color: var(--specie-selected);
+    --bs-heading-color: var(--specie-selected);
+    --bs-primary: #164A41;
+    --bs-primary-rgb: 22, 74, 65;
+    --bs-secondary: #4D774E;
+    --bs-secondary-rgb: 77, 119, 78;
+    --bs-success: #2F7D5E;
+    --bs-success-rgb: 47, 125, 94;
+    --bs-info: #2F6B5E;
+    --bs-info-rgb: 47, 107, 94;
+    --bs-warning: #9A6508;
+    --bs-warning-rgb: 154, 101, 8;
+    --bs-danger: #9B3B3B;
+    --bs-danger-rgb: 155, 59, 59;
+    --bs-light: #E9F3E4;
+    --bs-light-rgb: 233, 243, 228;
+    --bs-dark: #164A41;
+    --bs-dark-rgb: 22, 74, 65;
+    --bs-link-color: #164A41;
+    --bs-link-hover-color: #4D774E;
+    --bs-border-color: rgba(22, 74, 65, 0.25);
+    --bs-secondary-color: var(--specie-muted-on-light);
+    --bs-tertiary-bg: #4D774E;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--specie-bg);
+    color: var(--specie-selected);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--specie-selected);
+}
+
+::selection {
+    background-color: var(--specie-selected);
+    color: #FFFFFF;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar / step navigation                                           */
+/* ------------------------------------------------------------------ */
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    background-color: var(--specie-surface);
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.2);
+}
+
+.sidebar h4 {
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.sidebar .nav-link {
+    font-weight: 500;
+    color: #FFFFFF;
+    background-color: var(--specie-box);
+    padding: 0.55rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    margin-bottom: 0.4rem;
+    transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.sidebar .nav-link:hover {
+    color: #FFFFFF;
+    background-color: var(--specie-box-hover);
+    transform: translateX(2px);
+}
+
+.sidebar .nav-link.active {
+    color: #FFFFFF;
+    background-color: var(--specie-selected);
+    font-weight: 700;
+    box-shadow: 0 0 0 2px #FFFFFF, 0 0 14px rgba(22, 74, 65, 0.55);
+    transform: translateX(4px);
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: bold;
+    background-color: var(--specie-bg);
+    color: var(--specie-selected);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar .nav-link.active .step-number {
+    background-color: #FFFFFF;
+    color: var(--specie-selected);
+    box-shadow: 0 0 0 2px var(--specie-ring);
+}
+
+.step-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ------------------------------------------------------------------ */
+/* Main content                                                        */
+/* ------------------------------------------------------------------ */
+main {
+    margin-left: 240px;
+    padding-top: 1rem;
+}
+
+#current-step-title {
+    color: var(--specie-selected);
+}
+
+.card {
+    background-color: var(--specie-box);
+    color: var(--specie-text);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 0.75rem;
+    box-shadow: 0 0.125rem 0.35rem rgba(0, 0, 0, 0.15);
+    transition: box-shadow 0.15s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.25);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background-color: var(--specie-selected);
+    color: #FFFFFF;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.card-body {
+    color: var(--specie-text);
+}
+
+.card h1, .card h2, .card h3, .card h4, .card h5, .card h6,
+.modal-content h1, .modal-content h2, .modal-content h3,
+.modal-content h4, .modal-content h5, .modal-content h6 {
+    color: #FFFFFF;
+}
+
+.card .text-muted,
+.alert .text-muted,
+.file-item .text-muted,
+.table .text-muted,
+.modal .text-muted,
+.sidebar .text-muted {
+    color: var(--specie-muted-on-dark) !important;
+}
+
+.text-muted {
+    color: var(--specie-muted-on-light) !important;
+}
+
+.form-text {
+    color: var(--specie-muted-on-dark) !important;
+}
+
+.card .border-top,
+.card .border-bottom {
+    border-color: var(--specie-border-on-dark) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Progress bar                                                        */
+/* ------------------------------------------------------------------ */
+.progress {
+    height: 1.5rem;
+    border-radius: 0.75rem;
+    background-color: rgba(22, 74, 65, 0.25);
+}
+
+.progress-bar {
+    background: linear-gradient(45deg, var(--specie-selected), var(--specie-box));
+    color: #FFFFFF;
+    font-weight: 600;
+    transition: width 0.6s ease;
+}
+
+.card .progress {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.progress-bar.bg-success {
+    background-color: var(--specie-success) !important;
+}
+
+.progress-bar.bg-info {
+    background-color: var(--specie-box-hover) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Buttons                                                             */
+/* ------------------------------------------------------------------ */
+.btn {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-primary {
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-bg: var(--specie-selected);
+    --bs-btn-border-color: var(--specie-selected);
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: var(--specie-selected-hover);
+    --bs-btn-hover-border-color: var(--specie-selected-hover);
+    --bs-btn-active-color: #FFFFFF;
+    --bs-btn-active-bg: #103A33;
+    --bs-btn-active-border-color: #103A33;
+    --bs-btn-disabled-bg: var(--specie-selected);
+    --bs-btn-disabled-border-color: var(--specie-selected);
+}
+
+.btn-secondary {
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-bg: var(--specie-box);
+    --bs-btn-border-color: var(--specie-box);
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: var(--specie-box-hover);
+    --bs-btn-hover-border-color: var(--specie-box-hover);
+}
+
+.btn-success {
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-bg: var(--specie-success);
+    --bs-btn-border-color: var(--specie-success);
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: #256848;
+    --bs-btn-hover-border-color: #256848;
+}
+
+.btn-warning {
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-bg: var(--specie-warning);
+    --bs-btn-border-color: var(--specie-warning);
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: #7E5206;
+    --bs-btn-hover-border-color: #7E5206;
+}
+
+.btn-danger {
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-bg: var(--specie-danger);
+    --bs-btn-border-color: var(--specie-danger);
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: #7E2F2F;
+    --bs-btn-hover-border-color: #7E2F2F;
+}
+
+/* Outline buttons sitting on the light page background */
+.btn-outline-secondary,
+.btn-outline-dark {
+    --bs-btn-color: var(--specie-selected);
+    --bs-btn-border-color: var(--specie-selected);
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: var(--specie-selected);
+    --bs-btn-hover-border-color: var(--specie-selected);
+    --bs-btn-active-color: #FFFFFF;
+    --bs-btn-active-bg: var(--specie-selected);
+}
+
+/* Outline buttons sitting on dark card headers */
+.btn-outline-primary,
+.btn-outline-light {
+    --bs-btn-color: #FFFFFF;
+    --bs-btn-border-color: rgba(255, 255, 255, 0.7);
+    --bs-btn-hover-color: var(--specie-selected);
+    --bs-btn-hover-bg: #FFFFFF;
+    --bs-btn-hover-border-color: #FFFFFF;
+    --bs-btn-active-color: var(--specie-selected);
+    --bs-btn-active-bg: #FFFFFF;
+    --bs-btn-active-border-color: #FFFFFF;
+}
+
+.btn-outline-danger {
+    --bs-btn-color: #FFD6D6;
+    --bs-btn-border-color: #E9A9A9;
+    --bs-btn-hover-color: #FFFFFF;
+    --bs-btn-hover-bg: var(--specie-danger);
+    --bs-btn-hover-border-color: var(--specie-danger);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Form controls                                                       */
+/* ------------------------------------------------------------------ */
+.form-label {
+    color: #FFFFFF;
+    font-weight: 500;
+}
+
+.form-control,
+.form-select {
+    background-color: var(--specie-box);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 0.375rem;
+    color: #FFFFFF;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--specie-box);
+    border-color: var(--specie-ring);
+    color: #FFFFFF;
+    box-shadow: 0 0 0 0.2rem rgba(199, 227, 185, 0.35);
+}
+
+.form-select option {
+    background-color: #FFFFFF;
+    color: var(--specie-selected);
+}
+
+.form-control[type="file"]::file-selector-button {
+    background-color: var(--specie-selected);
+    border: none;
+    color: #FFFFFF;
+    border-radius: 0.25rem;
+    margin-right: 0.75rem;
+}
+
+.form-range {
+    accent-color: var(--specie-ring);
+}
+
+/* ------------------------------------------------------------------ */
+/* File upload                                                         */
+/* ------------------------------------------------------------------ */
+.file-item {
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    color: #FFFFFF;
+}
+
+.file-item i {
+    margin-right: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Method info cards                                                   */
+/* ------------------------------------------------------------------ */
+.method-info {
+    text-align: center;
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    color: #FFFFFF;
+}
+
+.method-info h6 {
+    color: #FFFFFF;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.method-info p {
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ------------------------------------------------------------------ */
+/* Plots                                                               */
+/* ------------------------------------------------------------------ */
+.plot-container {
+    border: 1px solid var(--chart-grid);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background-color: var(--chart-bg);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status messages                                                     */
+/* ------------------------------------------------------------------ */
+.status-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    min-width: 300px;
+}
+
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+    border-left: 4px solid transparent;
+    font-weight: 500;
+    color: #FFFFFF;
+}
+
+.alert-success {
+    background-color: rgba(47, 125, 94, 0.45);
+    border-left-color: var(--specie-success);
+    color: #EDF9F1;
+}
+
+.alert-warning {
+    background-color: rgba(154, 101, 8, 0.45);
+    border-left-color: var(--specie-warning);
+    color: #FFF3DC;
+}
+
+.alert-danger {
+    background-color: rgba(155, 59, 59, 0.45);
+    border-left-color: var(--specie-danger);
+    color: #FFE4E4;
+}
+
+.alert-info {
+    background-color: rgba(47, 107, 94, 0.45);
+    border-left-color: var(--specie-info);
+    color: #E3F4EF;
+}
+
+.alert .btn-close {
+    filter: invert(1);
+    opacity: 0.8;
+}
+
+/* ------------------------------------------------------------------ */
+/* Loading spinner                                                     */
+/* ------------------------------------------------------------------ */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+.modal .text-primary {
+    color: var(--specie-ring) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Results / tables                                                    */
+/* ------------------------------------------------------------------ */
+.results-table {
+    margin-top: 1rem;
+}
+
+.results-table th {
+    background-color: var(--specie-selected);
+    color: #FFFFFF;
+    border-top: none;
+    font-weight: 600;
+}
+
+.results-table td {
+    vertical-align: middle;
+}
+
+.table {
+    --bs-table-color: #FFFFFF;
+    --bs-table-bg: transparent;
+    --bs-table-border-color: rgba(255, 255, 255, 0.15);
+    --bs-table-striped-color: #FFFFFF;
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.05);
+    --bs-table-hover-color: #FFFFFF;
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.12);
+    color: #FFFFFF;
+}
+
+.table-dark {
+    --bs-table-color: #FFFFFF;
+    --bs-table-bg: var(--specie-selected);
+    --bs-table-border-color: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+}
+
+.table-success {
+    --bs-table-color: #FFFFFF;
+    --bs-table-bg: rgba(157, 200, 141, 0.28);
+    --bs-table-border-color: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+}
+
+/* ------------------------------------------------------------------ */
+/* Badges                                                              */
+/* ------------------------------------------------------------------ */
+.badge {
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.bg-primary {
+    background-color: rgba(22, 74, 65, 1) !important;
+}
+
+.bg-secondary {
+    background-color: rgba(77, 119, 78, 1) !important;
+}
+
+.bg-info {
+    background-color: var(--specie-info) !important;
+}
+
+.bg-success {
+    background-color: var(--specie-success) !important;
+}
+
+.bg-light {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    color: #FFFFFF !important;
+}
+
+.card .badge.bg-light {
+    background-color: #E9F3E4 !important;
+    color: var(--specie-selected) !important;
+}
+
+.card .badge.bg-light.text-primary {
+    color: var(--specie-selected) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* QC results                                                          */
+/* ------------------------------------------------------------------ */
+.qc-passed {
+    color: #B7F0CE;
+    font-weight: 600;
+}
+
+.qc-failed {
+    color: #FFC2C2;
+    font-weight: 600;
+}
+
+.qc-neutral {
+    color: #FFE1A8;
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------------------ */
+/* Spectrum counter                                                    */
+/* ------------------------------------------------------------------ */
+.spectrum-counter {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Modal                                                               */
+/* ------------------------------------------------------------------ */
+.modal-content {
+    background-color: var(--specie-box);
+    color: #FFFFFF;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    background-color: var(--specie-selected);
+    color: #FFFFFF;
+}
+
+.modal-body {
+    color: #FFFFFF;
+}
+
+/* ------------------------------------------------------------------ */
+/* Data display                                                        */
+/* ------------------------------------------------------------------ */
+.data-display {
+    background-color: rgba(0, 0, 0, 0.18);
+    color: #EAF6EF;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    border-left: 4px solid var(--specie-ring);
+}
+
+/* ------------------------------------------------------------------ */
+/* Parameter input groups                                              */
+/* ------------------------------------------------------------------ */
+.parameter-group {
+    background-color: var(--specie-box);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    color: #FFFFFF;
+}
+
+.parameter-group h6 {
+    color: #FFFFFF;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.parameter-group h6 i {
+    margin-right: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive adjustments                                             */
+/* ------------------------------------------------------------------ */
+@media (max-width: 767.98px) {
+    .sidebar {
+        position: static;
+        height: auto;
+        padding: 1rem 0;
+    }
+
+    main {
+        margin-left: 0;
+    }
+
+    .step-title {
+        display: none;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* Animations                                                          */
+/* ------------------------------------------------------------------ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.step-content {
+    animation: fadeIn 0.3s ease-in-out;
+}

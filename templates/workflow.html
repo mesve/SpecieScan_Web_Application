@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Step 1: Data Upload -->
+<div id="step1" class="step-content" style="display: {{ 'block' if state.current_step == 1 else 'none' }};">
+    <h3>Step 1: Upload .mzML Files</h3>
+    <p class="text-muted">Upload your MALDI-ToF-MS data files in .mzML format. You can upload multiple files at once.</p>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-upload"></i> File Upload</h5>
+                </div>
+                <div class="card-body">
+                    <form id="upload-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="file-input" class="form-label">Select .mzML files</label>
+                            <input class="form-control" type="file" id="file-input" name="files" 
+                                   multiple accept=".mzML,.mzml" required>
+                            <div class="form-text">Select one or more .mzML files from your MALDI data</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cloud-upload-alt"></i> Upload Files
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Uploaded Files</h5>
+                    {% if state.uploaded_files %}
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearFiles()">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div id="file-list">
+                        {% if state.uploaded_files %}
+                            {% for file in state.uploaded_files %}
+                            <div class="file-item alert alert-success">
+                                <i class="fas fa-file"></i> {{ file.name }}
+                                <span class="text-muted">({{ "%.2f"|format(file.size / 1024 / 1024) }} MB)</span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted" id="no-files-message">No files uploaded yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 2: Visualize Spectra -->
+<div id="step2" class="step-content" style="display: {{ 'block' if state.current_step == 2 else 'none' }};">
+    <h3>Step 2: Visualize Spectra</h3>
+    <p class="text-muted">Navigate through your uploaded spectra to examine the data quality.</p>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-chart-line"></i> Spectrum Visualization</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary" id="prev-spectrum">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <button class="btn btn-outline-primary" id="next-spectrum">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-primary fs-6" id="spectrum-filename">
+                            <i class="fas fa-file"></i> No file selected
+                        </span>
+                        <span class="badge bg-secondary" id="spectrum-data-source">
+                            <i class="fas fa-database"></i> Loading...
+                        </span>
+                        <span class="badge bg-info" id="spectrum-counter">Spectrum 1 of X</span>
+                    </div>
+                    <div id="spectrum-plot" style="height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 3: Quality Control -->
+<div id="step3" class="step-content" style="display: {{ 'block' if state.current_step == 3 else 'none' }};">
+    <h3>Step 3: Quality Control</h3>
+    <p class="text-muted">Automated quality control checks on your spectra.</p>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-check-circle"></i> QC Results</h5>
+                </div>
+                <div class="card-body">
+                    <div id="qc-results">
+                        <button class="btn btn-success" onclick="runQualityControl()">
+                            <i class="fas fa-play"></i> Run Quality Control
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 4: Pre-processing -->
+<div id="step4" class="step-content" style="display: {{ 'block' if state.current_step == 4 else 'none' }};">
+    <h3>Step 4: Pre-processing</h3>
+    <p class="text-muted">Apply smoothing, baseline removal, and intensity calibration.</p>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cogs"></i> Pre-processing Methods</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="method-info">
+                                <h6><i class="fas fa-wave-square"></i> Smoothing</h6>
+                                <p><strong>Method:</strong> Savitzky-Golay</p>
+                                <p><strong>Half Window Size:</strong> 10</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="method-info">
+                                <h6><i class="fas fa-align-center"></i> Baseline Removal</h6>
+                                <p><strong>Method:</strong> SNIP</p>
+                                <p><strong>Iterations:</strong> 100</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="method-info">
+                                <h6><i class="fas fa-chart-bar"></i> Intensity Calibration</h6>
+                                <p><strong>Method:</strong> TIC</p>
+                                <p><strong>Type:</strong> Total Ion Current</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary" onclick="runPreprocessing()">
+                            <i class="fas fa-play"></i> Start Pre-processing
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 5: SNR Analysis -->
+<div id="step5" class="step-content" style="display: {{ 'block' if state.current_step == 5 else 'none' }};">
+    <h3>Step 5: Signal-to-Noise Ratio Analysis</h3>
+    <p class="text-muted">Determine optimal SNR threshold for peak detection.</p>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-sliders-h"></i> Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="snr-value" class="form-label">SNR Threshold</label>
+                        <input type="number" class="form-control" id="snr-value" value="3.5" 
+                               step="0.1" min="1.0" max="10.0">
+                    </div>
+                    <button class="btn btn-primary" onclick="updateSNR()">
+                        <i class="fas fa-sync"></i> Update Plot
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-chart-area"></i> SNR Visualization</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary" id="prev-snr-spectrum">
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span class="badge bg-info d-flex align-items-center px-3" id="snr-spectrum-counter">Spectrum 1 of X</span>
+                        <button class="btn btn-outline-primary" id="next-snr-spectrum">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="snr-plot" style="height: 500px;"></div>
+                    <div class="mt-2 text-muted" id="snr-spectrum-filename">
+                        <small>Viewing SNR threshold lines for spectrum</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 6: Peak Picking -->
+<div id="step6" class="step-content" style="display: {{ 'block' if state.current_step == 6 else 'none' }};">
+    <h3>Step 6: Peak Picking</h3>
+    <p class="text-muted">Detect and deisotope peaks in your spectra.</p>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> Peak Detection Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="peak-snr" class="form-label">SNR Threshold</label>
+                        <input type="number" class="form-control" id="peak-snr" value="3.5" step="0.1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="min-cor" class="form-label">Min Correlation</label>
+                        <input type="number" class="form-control" id="min-cor" value="0.95" step="0.01">
+                    </div>
+                    <div class="mb-3">
+                        <label for="tolerance" class="form-label">Tolerance</label>
+                        <input type="number" class="form-control" id="tolerance" value="1e-4" step="1e-5">
+                    </div>
+                    <div class="mb-3">
+                        <label for="distance" class="form-label">Distance</label>
+                        <input type="number" class="form-control" id="distance" value="1.00235" step="0.00001">
+                    </div>
+                    <div class="mb-3">
+                        <label for="size" class="form-label">Size Range</label>
+                        <input type="text" class="form-control" id="size" value="2:10">
+                    </div>
+                    <button class="btn btn-primary" onclick="runPeakPicking()">
+                        <i class="fas fa-play"></i> Detect Peaks
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-chart-scatter"></i> Peak Visualization</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-primary" id="prev-peaks-spectrum">
+                            <i class="fas fa-chevron-left"></i> Previous Spectrum
+                        </button>
+                        <span class="badge bg-info d-flex align-items-center px-3" id="peaks-spectrum-counter">Spectrum 1 of X</span>
+                        <button class="btn btn-outline-primary" id="next-peaks-spectrum">
+                            Next Spectrum <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="peaks-plot" style="height: 500px;"></div>
+                    <div class="mt-2 text-muted" id="peaks-spectrum-filename">
+                        <small>Viewing peaks for spectrum</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 7: Peak Distribution -->
+<div id="step7" class="step-content" style="display: {{ 'block' if state.current_step == 7 else 'none' }};">
+    <h3>Step 7: Peak Distribution Analysis</h3>
+    <p class="text-muted">Analyze the distribution of peak counts and filter outliers.</p>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter"></i> Filters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="min-peaks" class="form-label">Minimum Peaks</label>
+                        <input type="range" class="form-range" id="min-peaks" min="0" max="200" value="45">
+                        <div class="text-muted" id="min-peaks-value">45</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="max-peaks" class="form-label">Maximum Peaks</label>
+                        <input type="range" class="form-range" id="max-peaks" min="0" max="500" value="105">
+                        <div class="text-muted" id="max-peaks-value">105</div>
+                    </div>
+                    <button class="btn btn-warning" onclick="applyFilters()">
+                        <i class="fas fa-cut"></i> Remove Outliers
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> Peak Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div id="histogram-plot" style="height: 500px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 8: Average Technical Replicates -->
+<div id="step8" class="step-content" style="display: {{ 'block' if state.current_step == 8 else 'none' }};">
+    <h3>Step 8: Average Technical Replicates</h3>
+    <p class="text-muted">Average spectra from the same sample to improve quality.</p>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-object-group"></i> Technical Replicate Averaging</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <button class="btn btn-primary btn-lg" onclick="averageReplicates()">
+                            <i class="fas fa-calculator"></i> Average Technical Replicates
+                        </button>
+                    </div>
+                    <div id="averaging-results" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 9: Export & Python Analysis -->
+<div id="step9" class="step-content" style="display: {{ 'block' if state.current_step == 9 else 'none' }};">
+    <h3>Step 9: Export Results & Species Identification</h3>
+    <p class="text-muted">Export processed data and run Python-based species identification.</p>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-download"></i> Export Peak Data</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Download processed peak data (mass and intensity) for all samples as CSV.</p>
+                    <button class="btn btn-success" onclick="exportResults()">
+                        <i class="fas fa-file-csv"></i> Export Peak CSV
+                    </button>
+                    <div id="export-status" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-dna"></i> Species Identification</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="reference-db" class="form-label">Reference Database</label>
+                        <select class="form-select" id="reference-db">
+                            <option value="eurasia_mammals" selected>Eurasia Mammals (Default)</option>
+                            <option value="africa_mammals">Africa Mammals</option>
+                            <option value="new_world_mammals">New World Mammals</option>
+                            <option value="birds">Birds</option>
+                            <option value="fish">Fish</option>
+                            <option value="amphibians">Amphibians</option>
+                            <option value="reptiles">Reptiles</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contamination-db" class="form-label">Contamination Database</label>
+                        <input type="file" class="form-control" id="contamination-db" accept=".csv">
+                        <div class="form-text">Optional: Custom contamination database (default provided)</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="runPythonAnalysis()">
+                        <i class="fas fa-play"></i> Run Species Identification
+                    </button>
+                    <div id="python-results" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Define step titles for JavaScript
+window.stepTitles = {
+    1: "Data Upload",
+    2: "Visualize Spectra", 
+    3: "Quality Control",
+    4: "Pre-process",
+    5: "Determine SNR",
+    6: "Peak Picking",
+    7: "Peak Distribution",
+    8: "Average Replicates", 
+    9: "Export & Analysis"
+};
+</script>
+{% endblock %}

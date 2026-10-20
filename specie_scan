@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""
+SpecieScan CLI Launcher
+Starts the SpecieScan web application from the terminal
+"""
+
+import os
+import sys
+import argparse
+import subprocess
+import webbrowser
+import time
+import signal
+from pathlib import Path
+
+def check_dependencies():
+    """Check if required dependencies are installed"""
+    print("Checking dependencies...")
+    
+    # Check Python version
+    if sys.version_info < (3, 7):
+        print("Error: Python 3.7 or higher is required")
+        return False
+    
+    # Check required packages
+    required_packages = ['flask', 'werkzeug']
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print(f"Error: Missing required packages: {', '.join(missing_packages)}")
+        print("Install with: pip install -r requirements.txt")
+        return False
+    
+    print("✓ Dependencies OK")
+    return True
+
+def check_r_environment():
+    """Check if R and required packages are available"""
+    print("Checking R environment...")
+    
+    try:
+        # Check if R is installed
+        result = subprocess.run(['R', '--version'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print("✓ R is installed")
+            
+            # Check if MALDIquant packages are available
+            r_check = """
+            if (!require('MALDIquant', quietly = TRUE)) {
+                cat('MALDIquant not found')
+                quit(status = 1)
+            }
+            if (!require('MALDIquantForeign', quietly = TRUE)) {
+                cat('MALDIquantForeign not found')
+                quit(status = 1)
+            }
+            if (!require('mzR', quietly = TRUE)) {
+                cat('mzR not found')
+                quit(status = 1)
+            }
+            cat('R packages OK')
+            """
+
+            result = subprocess.run(['R', '--slave', '-e', r_check], 
+                                 capture_output=True, text=True)
+            
+            if 'R packages OK' in result.stdout:
+                print("✓ R packages (MALDIquant, MALDIquantForeign, mzR) are available")
+                return True
+            else:
+                print("⚠ Warning: R packages not found. SpecieScan requires R for real spectra processing.")
+                print("Install R packages with:")
+                print("  R -e 'install.packages(c(\"MALDIquant\", \"MALDIquantForeign\"))'")
+                print("  R -e 'if (!requireNamespace(\"BiocManager\", quietly=TRUE)) install.packages(\"BiocManager\"); BiocManager::install(\"mzR\")'")
+                return False
+        else:
+            print("⚠ Warning: R not found. SpecieScan requires R for real spectra processing.")
+            print("Install R from: https://www.r-project.org/")
+            return False
+            
+    except FileNotFoundError:
+        print("⚠ Warning: R not found. SpecieScan requires R for real spectra processing.")
+        print("Install R from: https://www.r-project.org/")
+        return False
+
+def start_server(host='127.0.0.1', port=8080, debug=False):
+    """Start the Flask server"""
+    print(f"Starting SpecieScan server on http://{host}:{port}")
+    print("Press Ctrl+C to stop the server")
+    
+    # Set environment variables
+    env = os.environ.copy()
+    env['FLASK_APP'] = 'app.py'
+    env['FLASK_ENV'] = 'development' if debug else 'production'
+    
+    try:
+        # Change to app directory
+        app_dir = Path(__file__).parent
+        os.chdir(app_dir)
+        
+        # Start Flask app
+        if debug:
+            subprocess.run([sys.executable, 'app.py'], env=env)
+        else:
+            subprocess.run([sys.executable, 'app.py'], env=env)
+            
+    except KeyboardInterrupt:
+        print("\nShutting down SpecieScan server...")
+    except Exception as e:
+        print(f"Error starting server: {e}")
+
+def open_browser(url, delay=2):
+    """Open browser after a delay"""
+    def _open():
+        time.sleep(delay)
+        try:
+            webbrowser.open(url)
+            print(f"✓ Browser opened at {url}")
+        except Exception as e:
+            print(f"Could not open browser: {e}")
+            print(f"Please manually navigate to {url}")
+    
+    import threading
+    threading.Thread(target=_open, daemon=True).start()
+
+def main():
+    """Main CLI function"""
+    parser = argparse.ArgumentParser(
+        description='SpecieScan Web Application Launcher',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s                    # Start with defaults (localhost:8080)
+  %(prog)s --port 5000        # Start on port 5000
+  %(prog)s --debug            # Start in debug mode
+  %(prog)s --no-browser       # Start without opening browser
+  %(prog)s --check-only        # Check dependencies only
+        """
+    )
+    
+    parser.add_argument('--host', default='127.0.0.1',
+                       help='Host to bind to (default: 127.0.0.1)')
+    parser.add_argument('--port', type=int, default=8080,
+                       help='Port to bind to (default: 8080)')
+    parser.add_argument('--debug', action='store_true',
+                       help='Enable debug mode')
+    parser.add_argument('--no-browser', action='store_true',
+                       help='Do not open browser automatically')
+    parser.add_argument('--check-only', action='store_true',
+                       help='Check dependencies and exit')
+    
+    args = parser.parse_args()
+    
+    print("🧬 SpecieScan - ZooMS Analysis Web Application")
+    print("=" * 50)
+    
+    # Check dependencies
+    deps_ok = check_dependencies()
+    r_ok = check_r_environment()
+    
+    if args.check_only:
+        if deps_ok:
+            print("\n✓ All dependencies satisfied!")
+        else:
+            print("\n✗ Some dependencies are missing")
+            sys.exit(1)
+        return
+    
+    if not deps_ok:
+        print("\n✗ Dependencies check failed. Please install missing packages.")
+        sys.exit(1)
+    
+    # Open browser if requested
+    url = f"http://{args.host}:{args.port}"
+    if not args.no_browser:
+        open_browser(url)
+    
+    # Start server
+    try:
+        start_server(args.host, args.port, args.debug)
+    except KeyboardInterrupt:
+        print("\n👋 Goodbye!")
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

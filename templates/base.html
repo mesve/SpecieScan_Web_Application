@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpecieScan - ZooMS Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/specie_scan.css') }}" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Left Sidebar - Progress -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <h4 class="text-center mb-4">
+                        SpecieScan
+                    </h4>
+                    <ul class="nav flex-column">
+                        {% for step in range(1, 10) %}
+                        <li class="nav-item">
+                            <a href="#" class="nav-link step-link" data-step="{{ step }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="step-number badge">{{ step }}</span>
+                                    <span class="ms-2 step-title">{{ step_titles[step] }}</span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2" id="current-step-title">Data Upload</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="reset-btn">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="previous-btn">
+                                <i class="fas fa-arrow-left"></i> Previous
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary" id="next-btn">
+                                Next <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress mb-4">
+                    <div class="progress-bar" role="progressbar" style="width: {{ (state.current_step / 9) * 100 }}%" 
+                         aria-valuenow="{{ state.current_step }}" aria-valuemin="0" aria-valuemax="9">
+                        Step {{ state.current_step }} of 9
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div id="content-area">
+                    {% block content %}{% endblock %}
+                </div>
+
+                <!-- Status Messages -->
+                <div id="status-container"></div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Processing...</span>
+                    </div>
+                    <h5 class="mt-3" id="loading-message">Processing...</h5>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/specie_scan.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
