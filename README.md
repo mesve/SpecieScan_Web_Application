@@ -1,6 +1,6 @@
 # SpecieScan Web Application
 
-A browser-based application for **ZooMS** (Zooarchaeology by Mass Spectrometry) analysis. It provides a guided, 9-step workflow that takes raw `.mzML` MALDI-ToF mass spectra from upload all the way to taxonomic identification, combining **MALDIquant** R preprocessing with a **Python** species-matching engine.
+A browser-based (web) application for **ZooMS** (Zooarchaeology by Mass Spectrometry) analysis based on the SpecieScan algorithm. It provides a guided, 9-step workflow that takes `.mzML` MALDI-ToF mass spectra from upload  to taxonomic identification, combining the preprocessing **MALDIquant** R preprocessing with the **Python** SpecieScan algorithm.
 
 All spectra shown in the interface are the real data loaded from your files — there is no simulated/synthetic fallback.
 
@@ -10,7 +10,7 @@ For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: se
 
 ## Features
 
-- Complete 9-step workflow: upload → visualize → QC → preprocess → SNR → peak picking → distribution → averaging → identification/export.
+- 9-step workflow: upload → visualize → QC → preprocess → SNR → peak picking → distribution → averaging → identification/export.
 - Real data only: spectra and peaks are loaded from `.mzML` through MALDIquant (via `rpy2`), never generated.
 - Interactive Plotly.js visualisations (spectra, noise/SNR, peaks, peak-count histograms).
 - Species identification against a reference database plus contaminant screening.
