@@ -98,18 +98,18 @@ def start_server(host='127.0.0.1', port=8080, debug=False):
     env = os.environ.copy()
     env['FLASK_APP'] = 'app.py'
     env['FLASK_ENV'] = 'development' if debug else 'production'
-    
+    env['HOST'] = host
+    env['PORT'] = str(port)
+    env['OPEN_BROWSER'] = '0'  # the launcher opens the browser itself
+
     try:
         # Change to app directory
         app_dir = Path(__file__).parent
         os.chdir(app_dir)
-        
-        # Start Flask app
-        if debug:
-            subprocess.run([sys.executable, 'app.py'], env=env)
-        else:
-            subprocess.run([sys.executable, 'app.py'], env=env)
-            
+
+        # Start Flask app; app.py reads HOST/PORT from the environment
+        subprocess.run([sys.executable, 'app.py'], env=env)
+
     except KeyboardInterrupt:
         print("\nShutting down SpecieScan server...")
     except Exception as e:

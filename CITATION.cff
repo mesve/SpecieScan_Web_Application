@@ -8,6 +8,8 @@ authors:
     given-names: "Emese"
     email: "mesve3@gmail.com"
 license: MIT
+repository-code: "https://github.com/mesve/SpecieScan_Web_Application"
+url: "https://github.com/mesve/SpecieScan_Web_Application"
 version: "1.0.0"
 date-released: "2026-10-19"
 identifiers:

@@ -22,6 +22,9 @@ echo "✓ pip found"
 
 # Install Python dependencies
 echo "📦 Installing Python dependencies..."
+if [ "$(uname -m)" = "arm64" ] && [ -f "vendor/rpy2-3.5.15-cp310-cp310-macosx_11_0_arm64.whl" ]; then
+    pip install "vendor/rpy2-3.5.15-cp310-cp310-macosx_11_0_arm64.whl"
+fi
 pip install -r requirements.txt
 
 if [ $? -eq 0 ]; then

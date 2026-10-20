@@ -6,6 +6,10 @@ All spectra shown in the interface are the real data loaded from your files — 
 
 For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: semi-automated taxonomic identification of bone collagen peptides from MALDI-ToF-MS. Bioinformatics 40(2), 1–12. DOI: 10.1093/bioinformatics/btae054
 
+> **New to Python, R, or the terminal?** Follow **[START_HERE.md](START_HERE.md)** for a click-by-click macOS setup — no commands to type.
+>
+> **Prefer the terminal?** Follow **[TERMINAL_GUIDE.md](TERMINAL_GUIDE.md)** for a copy-paste macOS install.
+
 ---
 
 ## Features
@@ -36,6 +40,8 @@ Installed from `requirements.txt`:
 | pandas | 2.3.3 |
 | rpy2 | 3.5.15 |
 
+For Apple Silicon + Python 3.10, `vendor/` contains a prebuilt `rpy2` wheel so no compiler is required; the installers use it automatically. Other platforms install `rpy2` from PyPI.
+
 ### R packages
 - `MALDIquant` — mass spectrometry processing
 - `MALDIquantForeign` — file import (`.mzML`)
@@ -52,8 +58,8 @@ The web interface loads Plotly, Bootstrap and Font Awesome from public CDNs, so 
 
    Either clone the repository:
    ```bash
-   git clone https://github.com/mesve/SpecieScan_webapplication.git
-   cd SpecieScan_webapplication
+   git clone https://github.com/mesve/SpecieScan_Web_Application.git
+   cd SpecieScan_Web_Application
    ```
    or download and unzip the release, then `cd` into the folder.
 
@@ -165,7 +171,12 @@ To analyse other regions/taxa, swap in a different reference CSV with the same c
 ## Project structure
 
 ```
-SpecieScan_webapplication/
+SpecieScan_Web_Application/
+├── START_HERE.md                    # Beginner guide (no terminal knowledge needed)
+├── TERMINAL_GUIDE.md                # Copy-paste terminal install for macOS
+├── 1-Install-SpecieScan.command     # Double-click: one-time macOS setup
+├── 2-Start-SpecieScan.command       # Double-click: launch and open the browser
+├── vendor/                          # Prebuilt rpy2 wheel for Apple Silicon + Python 3.10
 ├── app.py                          # Main Flask application (routes + step processing)
 ├── specie_scan                      # CLI launcher
 ├── install.sh                       # Dependency/R-package installer

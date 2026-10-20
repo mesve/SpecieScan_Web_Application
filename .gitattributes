@@ -1,0 +1,6 @@
+# Normalise text files, but never touch spectral data
+* text=auto
+*.command text eol=lf
+*.sh text eol=lf
+*.mzML -text
+*.whl binary

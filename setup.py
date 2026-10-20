@@ -17,7 +17,7 @@ setup(
     long_description_content_type="text/markdown",
     author="SpecieScan Development Team",
     author_email="specie_scan@example.com",
-    url="https://github.com/mesve/SpecieScan_webapplication",
+    url="https://github.com/mesve/SpecieScan_Web_Application",
     packages=find_packages(),
     include_package_data=True,
     package_data={

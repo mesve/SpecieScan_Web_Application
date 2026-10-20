@@ -858,14 +858,20 @@ if __name__ == '__main__':
     print("=" * 70 + "\n")
 
     print("Starting SpecieScan Web Application...")
-    print("Opening browser at http://localhost:8080")
 
-    import webbrowser
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', '8080'))
+    browser_host = 'localhost' if host in ('0.0.0.0', '127.0.0.1') else host
+    url = f'http://{browser_host}:{port}'
+    print(f"Open in your browser: {url}")
 
-    def open_browser():
-        time.sleep(1.5)
-        webbrowser.open('http://localhost:8080')
+    if os.environ.get('OPEN_BROWSER', '1') != '0':
+        import webbrowser
 
-    threading.Thread(target=open_browser).start()
+        def open_browser():
+            time.sleep(1.5)
+            webbrowser.open(url)
 
-    app.run(host='0.0.0.0', port=8080, debug=False)
+        threading.Thread(target=open_browser, daemon=True).start()
+
+    app.run(host=host, port=port, debug=False)
