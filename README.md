@@ -17,6 +17,7 @@ For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: se
 - 9-step workflow: upload → visualize → QC → preprocess → SNR → peak picking → distribution → averaging → identification/export.
 - Real data only: spectra and peaks are loaded from `.mzML` through MALDIquant (via `rpy2`), never generated.
 - Interactive Plotly.js visualisations (spectra, noise/SNR, peaks, peak-count histograms).
+- Step 5 overlays the real spectrum with the estimated noise and SNR threshold curves, with mass-range, Y-max and threshold zoom controls for inspecting noise in detail.
 - Species identification against a reference database plus contaminant screening.
 - CSV export of processed peak data.
 - Terminal launcher that opens the app in your browser.
@@ -140,7 +141,7 @@ Upload these in Step 1 to try the full workflow. Steps 8–9 will average the th
 | 2. Visualise spectra | Plot real m/z vs intensity; browse files with Previous/Next. |
 | 3. Quality control | Detect empty / irregular spectra and summarise lengths. |
 | 4. Pre-processing | Savitzky–Golay smoothing, SNIP baseline removal, TIC normalisation. |
-| 5. SNR analysis | Estimate noise per spectrum and adjust the SNR threshold interactively. |
+| 5. SNR analysis | Estimate noise per spectrum, overlay the spectrum with the noise/SNR curves, and zoom to a mass window or to the threshold. |
 | 6. Peak picking | SuperSmoother detection with configurable SNR, then monoisotopic deisotoping. |
 | 7. Peak distribution | Histogram of peak counts with outlier filtering. |
 | 8. Average replicates | Mean-average technical replicates into one spectrum per sample. |

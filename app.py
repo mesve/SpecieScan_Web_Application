@@ -720,13 +720,24 @@ def get_noise_data(index):
         if index < len(processing_state.get('uploaded_files', [])):
             filename = processing_state['uploaded_files'][index]['name']
 
+        spectrum_mass = []
+        spectrum_intensity = []
+        spectra_arrays = data_store.get('processed_arrays') or data_store.get('spectra_arrays')
+        if spectra_arrays and index < len(spectra_arrays):
+            spectrum_mass = spectra_arrays[index][0].tolist()
+            spectrum_intensity = spectra_arrays[index][1].tolist()
+        source = 'processed' if data_store.get('processed_arrays') else 'raw'
+
         return jsonify({
             'success': True,
             'index': index,
             'total': total,
             'filename': filename,
             'noise_mass': noise['noise_mass'],
-            'noise_intensity': noise['noise_intensity']
+            'noise_intensity': noise['noise_intensity'],
+            'spectrum_mass': spectrum_mass,
+            'spectrum_intensity': spectrum_intensity,
+            'source': source
         })
     except Exception as e:
         import traceback

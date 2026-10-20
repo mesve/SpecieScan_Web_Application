@@ -33,6 +33,8 @@ const THEME = {
     danger: '#9B3B3B',
     success: '#2F7D5E',
     muted: '#8AAE7E',
+    noise: '#B4534B',
+    current: '#1D4ED8',
     legendBg: 'rgba(244, 249, 241, 0.9)'
 };
 
@@ -119,6 +121,28 @@ class SpecieScanApp {
         const maxPeaks = document.getElementById('max-peaks');
         
         if (snrValue) snrValue.addEventListener('change', () => this.updateSNRPlot());
+
+        // Step 5 zoom controls
+        const zoomThreshold = document.getElementById('snr-zoom-threshold');
+        const yMaxInput = document.getElementById('snr-y-max');
+        if (zoomThreshold) {
+            zoomThreshold.addEventListener('change', () => {
+                if (yMaxInput) yMaxInput.disabled = zoomThreshold.checked;
+                this.updateSNRPlot();
+            });
+        }
+        ['snr-mass-min', 'snr-mass-max', 'snr-y-max'].forEach((id) => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.updateSNRPlot();
+                    }
+                });
+            }
+        });
+
         if (minPeaks) minPeaks.addEventListener('input', (e) => {
             const display = document.getElementById('min-peaks-value');
             if (display) display.textContent = e.target.value;
@@ -809,7 +833,7 @@ class SpecieScanApp {
         
         if (filenameDiv && this.state.uploadedFiles[this.currentSNRSpectrumIndex]) {
             const filename = this.state.uploadedFiles[this.currentSNRSpectrumIndex].name;
-            filenameDiv.innerHTML = `<small>Viewing SNR for: <strong>${filename}</strong></small>`;
+            filenameDiv.innerHTML = `<small>Spectrum and noise for: <strong>${filename}</strong></small>`;
         }
     }
 
@@ -1005,13 +1029,21 @@ class SpecieScanApp {
             
             const mass = data.noise_mass;
             const noise = data.noise_intensity;
+
+            const spectrumTrace = {
+                x: data.spectrum_mass || [],
+                y: data.spectrum_intensity || [],
+                mode: 'lines',
+                name: 'Spectrum',
+                line: { color: THEME.line, width: 1 }
+            };
             
             const noiseTrace = {
                 x: mass,
                 y: noise,
                 mode: 'lines',
                 name: 'Estimated Noise',
-                line: { color: THEME.muted, width: 2 }
+                line: { color: THEME.noise, width: 1.5 }
             };
             
             const snr3Trace = {
@@ -1019,7 +1051,7 @@ class SpecieScanApp {
                 y: noise.map(v => v * 3),
                 mode: 'lines',
                 name: 'SNR = 3',
-                line: { color: THEME.threshold, width: 1.5, dash: 'dash' }
+                line: { color: THEME.threshold, width: 1, dash: 'dash' }
             };
             
             const snr5Trace = {
@@ -1027,7 +1059,7 @@ class SpecieScanApp {
                 y: noise.map(v => v * 5),
                 mode: 'lines',
                 name: 'SNR = 5',
-                line: { color: THEME.danger, width: 1.5, dash: 'dash' }
+                line: { color: THEME.danger, width: 1, dash: 'dot' }
             };
             
             const thresholdTrace = {
@@ -1035,14 +1067,25 @@ class SpecieScanApp {
                 y: noise.map(v => v * snrValue),
                 mode: 'lines',
                 name: `Current Threshold (SNR = ${snrValue})`,
-                line: { color: THEME.accent, width: 3 }
+                line: { color: THEME.current, width: 2 }
             };
             
             const maxNoise = noise.length ? arrayMax(noise) : 0;
+            const thresholdMax = maxNoise * snrValue;
             const filename = data.filename || `Spectrum ${index + 1}`;
+            const sourceNote = data.source === 'raw' ? ' — raw spectrum (run Step 4 to preprocess)' : '';
+
+            const massMinInput = document.getElementById('snr-mass-min');
+            const massMaxInput = document.getElementById('snr-mass-max');
+            const yMaxInput = document.getElementById('snr-y-max');
+            const zoomThreshold = document.getElementById('snr-zoom-threshold');
+            const massMin = massMinInput && massMinInput.value !== '' ? parseFloat(massMinInput.value) : null;
+            const massMax = massMaxInput && massMaxInput.value !== '' ? parseFloat(massMaxInput.value) : null;
+            const yMax = yMaxInput && yMaxInput.value !== '' ? parseFloat(yMaxInput.value) : null;
+            const useThresholdZoom = !!(zoomThreshold && zoomThreshold.checked);
             
             const layout = {
-                title: `Noise estimation - ${filename} (SNR = ${snrValue})`,
+                title: `Spectrum and noise - ${filename} (SNR = ${snrValue})${sourceNote}`,
                 xaxis: {
                     title: 'Mass (m/z)',
                     showgrid: true,
@@ -1065,8 +1108,22 @@ class SpecieScanApp {
                 },
                 margin: { t: 40, r: 20, b: 40, l: 60 }
             };
+
+            if (massMin !== null && massMax !== null &&
+                Number.isFinite(massMin) && Number.isFinite(massMax) && massMin < massMax) {
+                layout.xaxis.range = [massMin, massMax];
+                layout.xaxis.autorange = false;
+            }
+            if (useThresholdZoom && thresholdMax > 0) {
+                const zoomYMax = Math.max(thresholdMax, maxNoise * 5) * 1.1;
+                layout.yaxis.range = [0, zoomYMax];
+                layout.yaxis.autorange = false;
+            } else if (yMax !== null && Number.isFinite(yMax) && yMax > 0) {
+                layout.yaxis.range = [0, yMax];
+                layout.yaxis.autorange = false;
+            }
             
-            Plotly.newPlot('snr-plot', [noiseTrace, snr3Trace, snr5Trace, thresholdTrace], layout, {responsive: true});
+            Plotly.newPlot('snr-plot', [spectrumTrace, noiseTrace, snr3Trace, snr5Trace, thresholdTrace], layout, {responsive: true});
             
         } catch (error) {
             console.error('Error loading noise data:', error);
@@ -1297,6 +1354,35 @@ window.runPreprocessing = async function() {
 
 window.updateSNR = function() {
     console.log('Updating SNR...');
+    window.app.updateSNRPlot();
+};
+
+window.setSNRZoom = function(massMin, massMax, yMax) {
+    const minInput = document.getElementById('snr-mass-min');
+    const maxInput = document.getElementById('snr-mass-max');
+    const yInput = document.getElementById('snr-y-max');
+    const thresholdZoom = document.getElementById('snr-zoom-threshold');
+
+    if (minInput) minInput.value = massMin;
+    if (maxInput) maxInput.value = massMax;
+    if (yInput) {
+        yInput.value = yMax === null || yMax === undefined ? '' : yMax;
+        yInput.disabled = false;
+    }
+    if (thresholdZoom) thresholdZoom.checked = false;
+    window.app.updateSNRPlot();
+};
+
+window.resetSNRZoom = function() {
+    ['snr-mass-min', 'snr-mass-max', 'snr-y-max'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.value = '';
+            input.disabled = false;
+        }
+    });
+    const thresholdZoom = document.getElementById('snr-zoom-threshold');
+    if (thresholdZoom) thresholdZoom.checked = false;
     window.app.updateSNRPlot();
 };
 

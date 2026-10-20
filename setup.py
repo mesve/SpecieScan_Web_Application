@@ -11,7 +11,7 @@ long_description = readme_file.read_text() if readme_file.exists() else "SpecieS
 
 setup(
     name="specie-scan-web",
-    version="1.0.0",
+    version="3.0.0",
     description="Web-based interface for ZooMS (Zooarchaeology Mass Spectrometry) analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",

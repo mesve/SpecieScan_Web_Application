@@ -182,6 +182,46 @@
                     <button class="btn btn-primary" onclick="updateSNR()">
                         <i class="fas fa-sync"></i> Update Plot
                     </button>
+
+                    <hr>
+                    <h6><i class="fas fa-search-plus"></i> Zoom</h6>
+                    <p class="text-muted small mb-2">Leave the mass fields blank to show the full range.</p>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label for="snr-mass-min" class="form-label small">Mass min (m/z)</label>
+                            <input type="number" class="form-control form-control-sm" id="snr-mass-min"
+                                   placeholder="1150" step="any" min="0">
+                        </div>
+                        <div class="col-6">
+                            <label for="snr-mass-max" class="form-label small">Mass max (m/z)</label>
+                            <input type="number" class="form-control form-control-sm" id="snr-mass-max"
+                                   placeholder="1250" step="any" min="0">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label for="snr-y-max" class="form-label small">Y max (intensity)</label>
+                        <input type="number" class="form-control form-control-sm" id="snr-y-max"
+                               placeholder="auto (e.g. 0.01)" step="any" min="0">
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="snr-zoom-threshold">
+                        <label class="form-check-label small" for="snr-zoom-threshold">
+                            Zoom to threshold (auto Y)
+                        </label>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <button class="btn btn-outline-primary btn-sm" onclick="updateSNR()">Apply zoom</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetSNRZoom()">Reset</button>
+                    </div>
+                    <div class="small text-muted mt-3 mb-1">Presets (Y max 0.01)</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setSNRZoom(1150, 1250, 0.01)">
+                            1150–1250
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="setSNRZoom(3090, 3100, 0.01)">
+                            3090–3100
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -202,7 +242,7 @@
                 <div class="card-body">
                     <div id="snr-plot" style="height: 500px;"></div>
                     <div class="mt-2 text-muted" id="snr-spectrum-filename">
-                        <small>Viewing SNR threshold lines for spectrum</small>
+                        <small>Spectrum with estimated noise and SNR threshold lines. Use the zoom panel to inspect a mass window.</small>
                     </div>
                 </div>
             </div>
