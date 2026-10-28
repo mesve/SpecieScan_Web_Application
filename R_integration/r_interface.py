@@ -155,6 +155,40 @@ class SpecieScanR:
             raise RIntegrationError(f"Error loading mzML files: {str(e)}\n{traceback.format_exc()}")
 
     # ------------------------------------------------------------------
+    # Optional Step 0: convert Bruker Flex data to .mzML
+    # ------------------------------------------------------------------
+    @_serialized
+    def convert_bruker_flex(self, input_path: str, output_path: str) -> int:
+        """
+        Import a Bruker Flex data folder with MALDIquantForeign and export
+        every spectrum as .mzML.
+
+        Returns the number of imported spectra.
+        """
+        try:
+            ensure_conversion()
+            os.makedirs(output_path, exist_ok=True)
+            spectra = self.maldiquant_foreign.importBrukerFlex(
+                input_path, verbose=False
+            )
+            count = int(len(spectra))
+            if count == 0:
+                raise RIntegrationError(
+                    'No Bruker Flex spectra were found in the uploaded archive.'
+                )
+            self.maldiquant_foreign.exportMzMl(
+                spectra, path=output_path, force=True
+            )
+            return count
+        except RIntegrationError:
+            raise
+        except Exception as e:
+            raise RIntegrationError(
+                f'Error converting Bruker Flex data: {str(e)}\n'
+                f'{traceback.format_exc()}'
+            )
+
+    # ------------------------------------------------------------------
     # Quality control
     # ------------------------------------------------------------------
     @_serialized

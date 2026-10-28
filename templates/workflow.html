@@ -1,6 +1,90 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Step 0: Optional Bruker Flex -> mzML conversion -->
+<div id="step0" class="step-content" style="display: {{ 'block' if state.current_step == 0 else 'none' }};">
+    <h3>Step 0: Convert File <span class="badge bg-secondary align-middle">Optional</span></h3>
+    <p class="text-muted">Convert raw Bruker Flex files to .mzML before starting the workflow. You can skip this step if your data are already in .mzML format.</p>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-upload"></i> Bruker File Upload</h5>
+                </div>
+                <div class="card-body">
+                    <form id="step0-upload-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="step0-file-input" class="form-label">Select a Bruker Flex .zip archive</label>
+                            <input class="form-control" type="file" id="step0-file-input" name="file"
+                                   accept=".zip,application/zip" required>
+                            <div class="form-text">
+                                Upload a ZIP archive of your Bruker MALDI folder
+                                (right-click the folder &rarr; Compress). Maximum 500 MB.
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-cloud-upload-alt"></i> Upload Bruker Files
+                        </button>
+                    </form>
+                    <div id="step0-upload-status" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-export"></i> Converted .mzML Files</h5>
+                    <button class="btn btn-sm btn-outline-danger" id="step0-clear-btn"
+                            style="display: none;" onclick="clearStep0()">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button class="btn btn-primary" id="step0-convert-btn"
+                                onclick="convertBruker()" disabled>
+                            <i class="fas fa-cogs"></i> Convert to mzML
+                        </button>
+                        <a class="btn btn-success" id="step0-download-btn"
+                           href="/api/step0/download" style="display: none;">
+                            <i class="fas fa-download"></i> Download .mzML Files (.zip)
+                        </a>
+                    </div>
+                    <div id="step0-file-list">
+                        <p class="text-muted mb-0">No converted files yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="step0-note mt-3">
+        <p class="mb-2">
+            This is an optional step to convert the raw Bruker files to .mzML format.
+            The next step (Step 1) requires renamed .mzML files with the following
+            naming: <strong>Samplenumber_spotnumber</strong> (e.g.
+            <code>DC15000_A1.mzML</code>). Renaming the files is necessary for
+            averaging the technical replicates. Thus, the replicates of the same
+            sample should have the same unique identifier (i.e., <strong>DC15000</strong>,
+            in the example) and the associated spots (e.g., <strong>_A1</strong>,
+            <strong>_D1</strong>, <strong>_G1</strong>).
+        </p>
+        <p class="mb-0">
+            Renaming is not done automatically: the converter keeps the file names
+            produced by MALDIquantForeign, so rename the downloaded files before
+            uploading them in Step 1.
+        </p>
+    </div>
+
+    <div class="mt-3">
+        <button class="btn btn-outline-primary" onclick="skipStep0()">
+            Skip to Step 1 <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+</div>
+
 <!-- Step 1: Data Upload -->
 <div id="step1" class="step-content" style="display: {{ 'block' if state.current_step == 1 else 'none' }};">
     <h3>Step 1: Upload .mzML Files</h3>
@@ -57,36 +141,63 @@
     </div>
 </div>
 
-<!-- Step 2: Visualize Spectra -->
+<!-- Step 2: Visualise Spectra -->
 <div id="step2" class="step-content" style="display: {{ 'block' if state.current_step == 2 else 'none' }};">
-    <h3>Step 2: Visualize Spectra</h3>
-    <p class="text-muted">Navigate through your uploaded spectra to examine the data quality.</p>
+    <h3>Step 2: Visualise Spectra</h3>
+    <p class="text-muted">Compare two spectra in a mirror view. The top spectrum is plotted normally; the bottom spectrum is mirrored across the shared baseline. Each side has its own navigation.</p>
     
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5><i class="fas fa-chart-line"></i> Spectrum Visualization</h5>
-                    <div class="btn-group">
-                        <button class="btn btn-outline-primary" id="prev-spectrum">
-                            <i class="fas fa-chevron-left"></i> Previous
-                        </button>
-                        <button class="btn btn-outline-primary" id="next-spectrum">
-                            Next <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
+                    <h5><i class="fas fa-chart-line"></i> Mirror Spectrum View</h5>
+                    <span class="badge bg-secondary" id="spectrum-data-source">
+                        <i class="fas fa-database"></i> Loading...
+                    </span>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span class="badge bg-primary fs-6" id="spectrum-filename">
-                            <i class="fas fa-file"></i> No file selected
-                        </span>
-                        <span class="badge bg-secondary" id="spectrum-data-source">
-                            <i class="fas fa-database"></i> Loading...
-                        </span>
-                        <span class="badge bg-info" id="spectrum-counter">Spectrum 1 of X</span>
+                    <div class="mirror-toolbar mirror-toolbar-top mb-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-primary">Top</span>
+                            <span class="badge bg-primary fs-6" id="top-spectrum-filename">
+                                <i class="fas fa-file"></i> No file selected
+                            </span>
+                            <span class="badge bg-info" id="top-spectrum-counter">Spectrum 1 of X</span>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" id="prev-top-spectrum">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" id="next-top-spectrum">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div id="spectrum-plot" style="height: 500px;"></div>
+
+                    <div id="spectrum-plot" style="height: 650px;"></div>
+
+                    <div class="mirror-toolbar mirror-toolbar-bottom mt-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-secondary">Bottom &middot; mirrored</span>
+                            <span class="badge bg-secondary fs-6" id="bottom-spectrum-filename">
+                                <i class="fas fa-file"></i> No file selected
+                            </span>
+                            <span class="badge bg-info" id="bottom-spectrum-counter">Spectrum 1 of X</span>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-primary" id="prev-bottom-spectrum">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" id="next-bottom-spectrum">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 text-muted small">
+                        <i class="fas fa-link"></i> Both panels share one m/z axis: zooming or panning either spectrum updates both.
+                        The bottom intensity scale is independent and mirrored, with positive labels.
+                    </div>
                 </div>
             </div>
         </div>
@@ -228,7 +339,7 @@
         <div class="col-md-9">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5><i class="fas fa-chart-area"></i> SNR Visualization</h5>
+                    <h5><i class="fas fa-chart-area"></i> SNR Visualisation</h5>
                     <div class="btn-group">
                         <button class="btn btn-outline-primary" id="prev-snr-spectrum">
                             <i class="fas fa-chevron-left"></i> Previous
@@ -291,7 +402,7 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5><i class="fas fa-chart-scatter"></i> Peak Visualization</h5>
+                    <h5><i class="fas fa-chart-scatter"></i> Peak Visualisation</h5>
                     <div class="btn-group">
                         <button class="btn btn-outline-primary" id="prev-peaks-spectrum">
                             <i class="fas fa-chevron-left"></i> Previous Spectrum
@@ -316,7 +427,7 @@
 <!-- Step 7: Peak Distribution -->
 <div id="step7" class="step-content" style="display: {{ 'block' if state.current_step == 7 else 'none' }};">
     <h3>Step 7: Peak Distribution Analysis</h3>
-    <p class="text-muted">Analyze the distribution of peak counts and filter outliers.</p>
+    <p class="text-muted">Analyse the distribution of peak counts and filter outliers.</p>
     
     <div class="row">
         <div class="col-md-3">
@@ -406,16 +517,48 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label for="reference-db" class="form-label">Reference Database</label>
-                        <select class="form-select" id="reference-db">
-                            <option value="eurasia_mammals" selected>Eurasia Mammals (Default)</option>
-                            <option value="africa_mammals">Africa Mammals</option>
-                            <option value="new_world_mammals">New World Mammals</option>
-                            <option value="birds">Birds</option>
-                            <option value="fish">Fish</option>
-                            <option value="amphibians">Amphibians</option>
-                            <option value="reptiles">Reptiles</option>
-                        </select>
+                        <label class="form-label fw-semibold">Reference Database</label>
+
+                        <div class="reference-db-option">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="reference-db-mode"
+                                       id="reference-db-custom" value="custom">
+                                <label class="form-check-label" for="reference-db-custom">
+                                    Upload my own reference database
+                                </label>
+                            </div>
+                            <div class="ms-4 mt-2">
+                                <input type="file" class="form-control" id="reference-db-file" accept=".csv">
+                                <div class="form-text">
+                                    CSV only. Layout: Order, Family, Species, ZooMS_taxon, then marker masses.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="reference-db-or"><span>OR</span></div>
+
+                        <div class="reference-db-option">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="reference-db-mode"
+                                       id="reference-db-default" value="default" checked>
+                                <label class="form-check-label" for="reference-db-default">
+                                    Choose default SpecieScan Reference Databases (2024)
+                                </label>
+                            </div>
+                            <div class="ms-4 mt-2">
+                                <select class="form-select" id="reference-db">
+                                    {% for key, database in reference_databases.items() %}
+                                    <option value="{{ key }}"{% if key == default_reference_db %} selected{% endif %}>
+                                        {{ database.label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    These reference databases are from the SpecieScan algorithm
+                                    (last updated in 2024).
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="contamination-db" class="form-label">Contamination Database</label>
@@ -425,11 +568,11 @@
                     <button class="btn btn-primary" onclick="runPythonAnalysis()">
                         <i class="fas fa-play"></i> Run Species Identification
                     </button>
-                    <div id="python-results" class="mt-3"></div>
                 </div>
             </div>
         </div>
     </div>
+    <div id="python-results" class="mt-4"></div>
 </div>
 {% endblock %}
 
@@ -437,8 +580,9 @@
 <script>
 // Define step titles for JavaScript
 window.stepTitles = {
+    0: "Convert File (Optional)",
     1: "Data Upload",
-    2: "Visualize Spectra", 
+    2: "Visualise Spectra",
     3: "Quality Control",
     4: "Pre-process",
     5: "Determine SNR",

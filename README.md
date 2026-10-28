@@ -1,6 +1,6 @@
 # SpecieScan Web Application
 
-A browser-based (web) application for **ZooMS** (Zooarchaeology by Mass Spectrometry) analysis based on the SpecieScan algorithm. It provides a guided, 9-step workflow that takes `.mzML` MALDI-ToF mass spectra from upload  to taxonomic identification, combining the preprocessing **MALDIquant** R preprocessing with the **Python** SpecieScan algorithm.
+A browser-based (web) application for **ZooMS** (Zooarchaeology by Mass Spectrometry) analysis based on the SpecieScan algorithm. It provides an optional Bruker-to-`.mzML` conversion step followed by a guided, 9-step workflow that takes `.mzML` MALDI-ToF mass spectra from upload to taxonomic identification, combining **MALDIquant** R pre-processing with the **Python** SpecieScan algorithm.
 
 All spectra shown in the interface are the real data loaded from your files — there is no simulated/synthetic fallback.
 
@@ -14,10 +14,13 @@ For more information please read Végh, E. I. & Douka, K. (2024). SpecieScan: se
 
 ## Features
 
-- 9-step workflow: upload → visualize → QC → preprocess → SNR → peak picking → distribution → averaging → identification/export.
+- Optional **Step 0**: convert raw Bruker Flex data to `.mzML` (ZIP upload, conversion in R, ZIP download).
+- 9-step workflow: upload → visualise → QC → pre-process → SNR → peak picking → distribution → averaging → identification/export.
 - Real data only: spectra and peaks are loaded from `.mzML` through MALDIquant (via `rpy2`), never generated.
-- Interactive Plotly.js visualisations (spectra, noise/SNR, peaks, peak-count histograms).
+- Interactive Plotly.js visualisations (mirror spectra, noise/SNR, peaks, peak-count histograms).
+- Step 2 mirror view: two spectra stacked around a shared m/z axis, with the bottom spectrum mirrored and independently navigable.
 - Step 5 overlays the real spectrum with the estimated noise and SNR threshold curves, with mass-range, Y-max and threshold zoom controls for inspecting noise in detail.
+- Step 9 ships seven SpecieScan reference databases (Eurasia, African and New World mammals, birds, fish, amphibians, reptiles; last updated 2024) and also accepts a custom reference CSV.
 - Species identification against a reference database plus contaminant screening.
 - CSV export of processed peak data.
 - Terminal launcher that opens the app in your browser.
@@ -45,7 +48,7 @@ For Apple Silicon + Python 3.10, `vendor/` contains a prebuilt `rpy2` wheel so n
 
 ### R packages
 - `MALDIquant` — mass spectrometry processing
-- `MALDIquantForeign` — file import (`.mzML`)
+- `MALDIquantForeign` — `.mzML` import/export and Bruker Flex import (used by optional Step 0)
 - `mzR` — low-level mzML reader (a dependency of MALDIquantForeign; from Bioconductor)
 
 ### Network
@@ -133,36 +136,59 @@ Upload these in Step 1 to try the full workflow. Steps 8–9 will average the th
 
 ---
 
+## Optional Step 0: convert Bruker data to .mzML
+
+If your spectra come straight from a Bruker MALDI instrument, the app can convert them before the main workflow. This step is optional — skip it if your files are already `.mzML`.
+
+1. Compress your Bruker MALDI folder into a `.zip` (on macOS: right-click the folder → **Compress**).
+2. On **Step 0**, upload the ZIP with **Upload Bruker Files**. The archive is extracted safely on your computer; nothing is uploaded to the internet.
+3. Click **Convert to mzML**. R (`MALDIquantForeign`) imports the Bruker Flex spectra and exports one `.mzML` file per spectrum.
+4. Click **Download .mzML Files (.zip)** and unzip the result.
+
+Renaming is **not** automatic, because Step 1 and Step 8 rely on your sample names. Rename the converted files to `Samplenumber_spotnumber` (for example `DC15000_A1.mzML`, `DC15000_D1.mzML`, `DC15000_G1.mzML`) before uploading them in Step 1. Replicates of the same sample must share the same identifier so that Step 8 can average them.
+
+The ZIP upload limit is 500 MB and the extracted size limit is 2 GB.
+
+---
+
 ## Workflow
 
 | Step | What it does |
 |---|---|
+| 0. Convert (optional) | Upload a Bruker Flex `.zip`, convert to `.mzML` in R, download the converted files. |
 | 1. Upload | Select one or more `.mzML` files (batch upload supported). |
-| 2. Visualise spectra | Plot real m/z vs intensity; browse files with Previous/Next. |
+| 2. Visualise spectra | Plot two real spectra in a mirror view around a shared m/z axis. Each side has its own Previous/Next controls and filename label; zooming one side updates both. |
 | 3. Quality control | Detect empty / irregular spectra and summarise lengths. |
 | 4. Pre-processing | Savitzky–Golay smoothing, SNIP baseline removal, TIC normalisation. |
 | 5. SNR analysis | Estimate noise per spectrum, overlay the spectrum with the noise/SNR curves, and zoom to a mass window or to the threshold. |
 | 6. Peak picking | SuperSmoother detection with configurable SNR, then monoisotopic deisotoping. |
 | 7. Peak distribution | Histogram of peak counts with outlier filtering. |
 | 8. Average replicates | Mean-average technical replicates into one spectrum per sample. |
-| 9. Export & identify | Download peak CSV, then match peaks against the reference database and screen for contaminants. |
+| 9. Export & identify | Download peak CSV, then match peaks against a built-in SpecieScan 2024 database or your own uploaded reference CSV, and screen for contaminants. |
 
 ---
 
 ## Input data and reference databases
 
 - **Input:** MALDI-ToF mass spectra in `.mzML` format.
-- **Reference database:** `Mammals_reference_Eurasia_2024.csv` (species + ZooMS marker masses).
+- **Built-in reference databases (2024):** seven SpecieScan databases in `reference_databases/`:
+  - Eurasia Mammals (121 species)
+  - African Mammals (65 species)
+  - New World Mammals (97 species)
+  - Birds (21 species)
+  - Fish (141 species)
+  - Amphibians (11 species)
+  - Reptiles (8 species)
+- **Custom reference database:** upload a `.csv` in Step 9. It must use the columns `Order, Family, Species, ZooMS_taxon`, followed by one or more marker-mass columns. Marker cells can contain one mass or alternatives separated by `/`, `•`, or whitespace.
 - **Contaminants:** `contaminants_list_2024.csv` (known contaminant masses).
 
-These two CSV files ship at the repository root. The app locates them next to `app.py` or in a parent directory (see `find_data_file()` in `app.py`). If you move the app, keep the CSVs alongside it.
-
-To analyse other regions/taxa, swap in a different reference CSV with the same column layout (first columns `Order, Family, Species, ZooMS_taxon`, followed by the marker-mass columns).
+The built-in databases live in `reference_databases/` and are loaded from there. Custom uploads are stored outside `static/` and removed when the workflow is reset. The built-in files come from the SpecieScan algorithm and were last updated in 2024; see `reference_databases/README.md` for provenance and counts.
 
 ---
 
 ## Output
 
+- **Converted `.mzML` files** from optional Step 0, downloaded as a ZIP.
 - **Peak CSV** exported from Step 9 (one row per detected peak: filename, mass, intensity).
 - **Species identification** results in the browser: ranked matches with correlation scores.
 - **Contaminant screening** results per sample.
@@ -197,7 +223,8 @@ SpecieScan_Web_Application/
 │   ├── base.html
 │   └── workflow.html
 ├── sample_data/                    # Example Denisova batch-4 .mzML files
-├── Mammals_reference_Eurasia_2024.csv
+├── reference_databases/            # Seven built-in SpecieScan 2024 databases
+├── Mammals_reference_Eurasia_2024.csv  # Legacy copy (the app uses reference_databases/)
 └── contaminants_list_2024.csv
 ```
 
@@ -255,9 +282,9 @@ A machine-readable citation is provided in [`CITATION.cff`](CITATION.cff).
 
 ---
 
-## License
+## Licence
 
-MIT License — see [`LICENSE`](LICENSE). Copyright (c) 2026 Emese Végh.
+MIT Licence — see [`LICENSE`](LICENSE). Copyright (c) 2026 Emese Végh.
 
 ---
 
@@ -267,7 +294,7 @@ Dr Emese Végh — [mesve3@gmail.com](mailto:mesve3@gmail.com)
 
 ---
 
-## Acknowledgments
+## Acknowledgements
 
 - Much of the pre-processing steps of the code was adapted from Codlin MC, Douka K, Richter KK (2022). An application of zooms to identify archaeological avian fauna from Teotihuacan, Mexico. Journal of Archaeological Science;148:105692.
 - The MALDIquant and MALDIquantForeign developers for the R mass-spectrometry packages.

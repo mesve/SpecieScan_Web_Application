@@ -459,6 +459,90 @@ main {
     margin-right: 0.5rem;
 }
 
+/* Optional Step 0 explanatory note */
+.step0-note {
+    padding: 1rem 1.25rem;
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--specie-border-on-dark);
+    border-radius: 0.5rem;
+    color: var(--specie-text);
+}
+
+.step0-note code {
+    color: var(--specie-selected);
+    background-color: var(--chart-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.25rem;
+}
+
+.step0-note strong {
+    color: #FFFFFF;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 2 mirror spectrum toolbars                                     */
+/* ------------------------------------------------------------------ */
+.mirror-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.375rem;
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--specie-border-on-dark);
+}
+
+.mirror-toolbar .badge {
+    font-weight: 500;
+}
+
+.mirror-toolbar-top {
+    border-left: 4px solid var(--chart-line);
+}
+
+.mirror-toolbar-bottom {
+    border-left: 4px solid var(--chart-accent);
+}
+
+.mirror-toolbar .btn-group .btn {
+    white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step 9 reference database choice                                    */
+/* ------------------------------------------------------------------ */
+.reference-db-option {
+    padding: 0.75rem;
+    border: 1px solid rgba(22, 74, 65, 0.2);
+    border-radius: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.45);
+}
+
+.reference-db-option .form-check-label {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.reference-db-or {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.75rem 0;
+    color: var(--specie-muted-on-light);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.reference-db-or::before,
+.reference-db-or::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid rgba(22, 74, 65, 0.25);
+}
+
 /* ------------------------------------------------------------------ */
 /* Method info cards                                                   */
 /* ------------------------------------------------------------------ */
@@ -594,6 +678,14 @@ main {
     --bs-table-bg: rgba(157, 200, 141, 0.28);
     --bs-table-border-color: rgba(255, 255, 255, 0.2);
     color: #FFFFFF;
+}
+
+.zooms-taxon {
+    color: #FFD54F;
+    background-color: rgba(22, 74, 65, 0.82);
+    padding: 0.12em 0.4em;
+    border-radius: 0.25em;
+    font-weight: 600;
 }
 
 /* ------------------------------------------------------------------ */

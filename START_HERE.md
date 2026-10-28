@@ -48,7 +48,7 @@ Python is the language the web application is written in.
 
 ## Step 3 — Install R 4.2.3
 
-R does the mass-spectrometry preprocessing.
+R does the mass-spectrometry pre-processing.
 
 First check your Mac type: open the **Apple menu → About This Mac** and look at **Chip**.
 - If it says **Apple M1 / M2 / M3 / M4**, use the **Apple Silicon** link.
@@ -109,11 +109,14 @@ If the browser does not open, open Safari/Chrome and go to:
 
 ## Step 6 — Use the application
 
-1. In **Step 1**, click the upload area and choose your `.mzML` files (or drag them in).
-2. If you want to try it first, upload the files in the `sample_data` folder.
-3. Click **Process Files**.
-4. Follow the numbered steps in the left sidebar: visualise, quality control, preprocess, SNR, peak picking, distribution, averaging, and identification.
-5. In the final step you can download the peak table as a CSV file.
+1. **Step 0 (optional)** — if your data come straight from a Bruker MALDI instrument, compress the Bruker folder into a `.zip`, upload it in Step 0, click **Convert to mzML**, then download the converted files. Skip this step if your files are already `.mzML`.
+2. Rename the converted files to `Samplenumber_spotnumber` (for example `DC15000_A1.mzML`) before continuing. Replicates of the same sample need the same identifier so they can be averaged in Step 8.
+3. In **Step 1**, click the upload area and choose your `.mzML` files (or drag them in).
+4. If you want to try it first, upload the files in the `sample_data` folder.
+5. Click **Process Files**.
+6. Follow the numbered steps in the left sidebar: visualise, quality control, pre-process, SNR, peak picking, distribution, averaging, and identification. In Step 2 the spectra are shown as a mirror view: use the separate Previous/Next buttons above and below the plot to choose the top and bottom spectrum.
+7. In the final step, choose either **Upload my own reference database** (a `.csv` with the SpecieScan layout) or a **Default Reference Database (2024)** — Eurasia, African or New World mammals, birds, fish, amphibians, or reptiles — then run the identification. The built-in databases come from the SpecieScan algorithm and were last updated in 2024.
+8. You can download the peak table and the identification results as CSV files.
 
 The left sidebar always shows the documentation, the DOIs, and the citation for the method.
 

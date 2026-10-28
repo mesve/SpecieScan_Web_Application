@@ -21,6 +21,17 @@ function arrayMax(arr) {
     return m;
 }
 
+// Escape user/file-supplied text before inserting it into innerHTML.
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[ch]));
+}
+
 // Chart palette: light cream panels with dark-green ink, matching the UI.
 const THEME = {
     bg: '#F4F9F1',
@@ -40,15 +51,18 @@ const THEME = {
 
 class SpecieScanApp {
     constructor() {
-        this.currentStep = 1;
+        this.currentStep = 0;
         this.totalSteps = 9;
         this.state = {
             uploadedFiles: [],
             processingData: {},
             sessionId: null
         };
-        this.spectraData = null;
-        this.currentSpectrumIndex = 0;
+        this.topSpectrumData = null;
+        this.bottomSpectrumData = null;
+        this.topSpectrumIndex = 0;
+        this.bottomSpectrumIndex = 1;
+        this.spectrumTotal = 0;
         this.currentPeakIndex = 0;
         this.currentSNRSpectrumIndex = 0;  // For Step 5 navigation
         this.currentPeaksSpectrumIndex = 0;  // For Step 6 navigation
@@ -93,13 +107,50 @@ class SpecieScanApp {
         if (uploadForm) {
             uploadForm.addEventListener('submit', (e) => this.handleFileUpload(e));
         }
+
+        // Optional Step 0: Bruker upload
+        const step0Form = document.getElementById('step0-upload-form');
+        if (step0Form) {
+            step0Form.addEventListener('submit', (e) => this.handleStep0Upload(e));
+        }
+
+        // Step 9 reference database choice
+        const referenceCustomRadio = document.getElementById('reference-db-custom');
+        const referenceDefaultRadio = document.getElementById('reference-db-default');
+        const referenceFileInput = document.getElementById('reference-db-file');
+        const referenceDbSelect = document.getElementById('reference-db');
+
+        if (referenceFileInput && referenceCustomRadio) {
+            referenceFileInput.addEventListener('change', () => {
+                if (referenceFileInput.files.length > 0) {
+                    referenceCustomRadio.checked = true;
+                    syncReferenceDatabaseSelection();
+                }
+            });
+        }
+        if (referenceDbSelect && referenceDefaultRadio) {
+            referenceDbSelect.addEventListener('change', () => {
+                referenceDefaultRadio.checked = true;
+                syncReferenceDatabaseSelection();
+            });
+        }
+        [referenceCustomRadio, referenceDefaultRadio].forEach((radio) => {
+            if (radio) {
+                radio.addEventListener('change', syncReferenceDatabaseSelection);
+            }
+        });
+        syncReferenceDatabaseSelection();
         
-        // Spectrum navigation (Step 2)
-        const prevSpectrumBtn = document.getElementById('prev-spectrum');
-        const nextSpectrumBtn = document.getElementById('next-spectrum');
-        
-        if (prevSpectrumBtn) prevSpectrumBtn.addEventListener('click', () => this.previousSpectrum());
-        if (nextSpectrumBtn) nextSpectrumBtn.addEventListener('click', () => this.nextSpectrum());
+        // Spectrum navigation (Step 2 mirror view)
+        const prevTopSpectrumBtn = document.getElementById('prev-top-spectrum');
+        const nextTopSpectrumBtn = document.getElementById('next-top-spectrum');
+        const prevBottomSpectrumBtn = document.getElementById('prev-bottom-spectrum');
+        const nextBottomSpectrumBtn = document.getElementById('next-bottom-spectrum');
+
+        if (prevTopSpectrumBtn) prevTopSpectrumBtn.addEventListener('click', () => this.previousSpectrum('top'));
+        if (nextTopSpectrumBtn) nextTopSpectrumBtn.addEventListener('click', () => this.nextSpectrum('top'));
+        if (prevBottomSpectrumBtn) prevBottomSpectrumBtn.addEventListener('click', () => this.previousSpectrum('bottom'));
+        if (nextBottomSpectrumBtn) nextBottomSpectrumBtn.addEventListener('click', () => this.nextSpectrum('bottom'));
         
         // SNR spectrum navigation (Step 5)
         const prevSNRSpectrumBtn = document.getElementById('prev-snr-spectrum');
@@ -168,14 +219,16 @@ class SpecieScanApp {
                 uploadedFiles: state.uploaded_files || []
             };
             
-            this.currentStep = state.current_step || 1;
-            
+            this.currentStep = Number.isInteger(state.current_step) ? state.current_step : 0;
+
+            this.updateStep0UI(state.step0);
+
             this.showStep(this.currentStep);
             this.updateProgress();
         } catch (error) {
             console.error('Error loading state:', error);
             // Start fresh if state loading fails
-            this.currentStep = 1;
+            this.currentStep = 0;
             this.state = {
                 uploadedFiles: [],
                 processingData: {},
@@ -185,8 +238,8 @@ class SpecieScanApp {
     }
 
     showStep(stepNumber) {
-        // Hide all steps
-        for (let i = 1; i <= this.totalSteps; i++) {
+        // Hide all steps (Step 0 is optional and comes before Step 1)
+        for (let i = 0; i <= this.totalSteps; i++) {
             const stepElement = document.getElementById(`step${i}`);
             if (stepElement) {
                 stepElement.style.display = 'none';
@@ -220,15 +273,9 @@ class SpecieScanApp {
                 this.updateSNRCounter();
             }, 100);
         } else if (stepNumber === 6) {
-            // Load peaks for first spectrum when entering step 6
+            // Always verify peaks with the server when entering step 6
             this.currentPeaksSpectrumIndex = 0;
-            setTimeout(() => {
-                if (this.state.processingData?.step_6_data?.status === 'completed') {
-                    this.loadPeaksForSpectrum(0);
-                } else {
-                    this.showPeaksPrompt();
-                }
-            }, 100);
+            setTimeout(() => this.loadPeaksForSpectrum(0), 100);
         } else if (stepNumber === 7) {
             // Load histogram when entering step 7
             setTimeout(() => this.updateHistogram(), 100);
@@ -248,7 +295,7 @@ class SpecieScanApp {
 
         const step2Data = this.state.processingData?.step_2_data;
         if (step2Data && step2Data.status === 'completed') {
-            await this.loadSpectrumData(this.currentSpectrumIndex || 0);
+            await this.loadMirrorSpectra();
             return;
         }
         if (step2Data && step2Data.status === 'error') {
@@ -269,8 +316,11 @@ class SpecieScanApp {
                 await this.processCurrentStep();
                 const step2Data = this.state.processingData?.step_2_data;
                 if (step2Data && step2Data.status === 'completed') {
-                    this.currentSpectrumIndex = 0;
-                    await this.loadSpectrumData(0);
+                    this.topSpectrumIndex = 0;
+                    this.bottomSpectrumIndex = 1;
+                    this.topSpectrumData = null;
+                    this.bottomSpectrumData = null;
+                    await this.loadMirrorSpectra();
                 } else {
                     this.showSpectrumError(
                         'Could Not Load Spectra',
@@ -292,22 +342,33 @@ class SpecieScanApp {
     showSpectrumError(title, message, showRetry = false) {
         const plotDiv = document.getElementById('spectrum-plot');
         const dataSourceDiv = document.getElementById('spectrum-data-source');
-        const counterDiv = document.getElementById('spectrum-counter');
 
         if (dataSourceDiv) {
             dataSourceDiv.className = 'badge bg-danger';
             dataSourceDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
         }
-        if (counterDiv) {
-            counterDiv.textContent = `${this.state.uploadedFiles?.length || 0} files uploaded`;
-        }
+
+        ['top', 'bottom'].forEach((side) => {
+            const filenameDiv = document.getElementById(`${side}-spectrum-filename`);
+            if (filenameDiv) {
+                filenameDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Not loaded';
+            }
+            const counterDiv = document.getElementById(`${side}-spectrum-counter`);
+            if (counterDiv) {
+                counterDiv.textContent = '—';
+            }
+            const prevBtn = document.getElementById(`prev-${side}-spectrum`);
+            const nextBtn = document.getElementById(`next-${side}-spectrum`);
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+        });
 
         if (plotDiv) {
             plotDiv.innerHTML = `
-                <div class="d-flex flex-column align-items-center justify-content-center" style="height: 500px;">
+                <div class="d-flex flex-column align-items-center justify-content-center" style="height: 650px;">
                     <div class="alert alert-danger text-center" style="max-width: 650px;">
-                        <h5><i class="fas fa-exclamation-triangle"></i> ${title}</h5>
-                        <p class="mb-3">${message}</p>
+                        <h5><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(title)}</h5>
+                        <p class="mb-3">${escapeHtml(message)}</p>
                         ${showRetry ? '<button class="btn btn-danger" onclick="window.app.retryStep2()"><i class="fas fa-redo"></i> Retry</button>' : ''}
                     </div>
                 </div>
@@ -320,6 +381,10 @@ class SpecieScanApp {
             delete this.state.processingData.step_2_data;
             delete this.state.processingData.step_2_status;
         }
+        this.topSpectrumIndex = 0;
+        this.bottomSpectrumIndex = 1;
+        this.topSpectrumData = null;
+        this.bottomSpectrumData = null;
         this.ensureStep2Processed();
     }
 
@@ -331,6 +396,19 @@ class SpecieScanApp {
                 <div class="alert alert-info text-center" style="max-width: 600px;">
                     <h5><i class="fas fa-info-circle"></i> Peaks Not Detected Yet</h5>
                     <p class="mb-0">Click <strong>"Detect Peaks"</strong> to run peak picking on the pre-processed spectra.</p>
+                </div>
+            </div>
+        `;
+    }
+
+    showPeaksLoading() {
+        const plotDiv = document.getElementById('peaks-plot');
+        if (!plotDiv) return;
+        plotDiv.innerHTML = `
+            <div class="d-flex flex-column align-items-center justify-content-center" style="height: 500px;">
+                <div class="alert alert-info text-center" style="max-width: 600px;">
+                    <h5><i class="fas fa-spinner fa-spin"></i> Detecting Peaks...</h5>
+                    <p class="mb-0">Running peak picking on the pre-processed spectra.</p>
                 </div>
             </div>
         `;
@@ -350,8 +428,8 @@ class SpecieScanApp {
     }
 
     updateSidebar(currentStep) {
-        document.querySelectorAll('.step-link').forEach((link, index) => {
-            const step = index + 1;
+        document.querySelectorAll('.step-link').forEach((link) => {
+            const step = parseInt(link.dataset.step, 10);
             const badge = link.querySelector('.step-number');
             
             if (badge) {
@@ -369,7 +447,9 @@ class SpecieScanApp {
         if (progressBar) {
             progressBar.style.width = `${progressPercent}%`;
             progressBar.setAttribute('aria-valuenow', this.currentStep);
-            progressBar.textContent = `Step ${this.currentStep} of ${this.totalSteps}`;
+            progressBar.textContent = this.currentStep === 0
+                ? 'Optional Step 0'
+                : `Step ${this.currentStep} of ${this.totalSteps}`;
         }
     }
 
@@ -378,7 +458,7 @@ class SpecieScanApp {
         const nextBtn = document.getElementById('next-btn');
         
         if (prevBtn) {
-            prevBtn.disabled = this.currentStep === 1;
+            prevBtn.disabled = this.currentStep === 0;
         }
         
         if (nextBtn) {
@@ -400,9 +480,10 @@ class SpecieScanApp {
                 return;
             }
             
-            // Step 1 upload is handled separately. Steps that were already
-            // processed explicitly (e.g. via a button) are not re-run.
-            if (this.currentStep !== 1) {
+            // Step 0 is optional and Step 1 upload is handled separately. Steps
+            // that were already processed explicitly (e.g. via a button) are not
+            // re-run.
+            if (this.currentStep !== 0 && this.currentStep !== 1) {
                 const stepKey = `step_${this.currentStep}_data`;
                 const alreadyDone = this.state.processingData?.[stepKey]?.status === 'completed';
                 if (!alreadyDone) {
@@ -435,7 +516,7 @@ class SpecieScanApp {
     }
 
     async previousStep() {
-        if (this.currentStep > 1) {
+        if (this.currentStep > 0) {
             this.currentStep--;
             this.showStep(this.currentStep);
             this.updateProgress();
@@ -570,6 +651,192 @@ class SpecieScanApp {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Optional Step 0: Bruker Flex -> .mzML conversion
+    // ------------------------------------------------------------------
+    updateStep0UI(step0) {
+        if (!step0) return;
+        this.step0 = step0;
+
+        const uploadStatus = document.getElementById('step0-upload-status');
+        const convertBtn = document.getElementById('step0-convert-btn');
+        const downloadBtn = document.getElementById('step0-download-btn');
+        const clearBtn = document.getElementById('step0-clear-btn');
+        const fileList = document.getElementById('step0-file-list');
+        const files = step0.files || [];
+        const hasSource = step0.status === 'uploaded' || step0.status === 'converted';
+
+        if (convertBtn) {
+            convertBtn.disabled = !hasSource;
+        }
+        if (clearBtn) {
+            clearBtn.style.display = hasSource ? 'inline-block' : 'none';
+        }
+        if (downloadBtn) {
+            downloadBtn.style.display = files.length > 0 ? 'inline-block' : 'none';
+        }
+
+        if (uploadStatus) {
+            if (step0.status === 'idle') {
+                uploadStatus.innerHTML = step0.available === false
+                    ? `<div class="alert alert-warning mb-0">
+                           <i class="fas fa-exclamation-triangle"></i>
+                           Bruker conversion requires R with MALDIquant and
+                           MALDIquantForeign. You can still skip this optional step.
+                       </div>`
+                    : '';
+            } else if (step0.status === 'uploaded') {
+                uploadStatus.innerHTML = `
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>${escapeHtml(step0.upload_name || 'Bruker archive')}</strong>
+                        uploaded &mdash; ${step0.source_file_count} files extracted.
+                        <div class="small mt-1">Ready to convert to .mzML.</div>
+                    </div>`;
+            } else if (step0.status === 'converted') {
+                uploadStatus.innerHTML = `
+                    <div class="alert alert-success mb-0">
+                        <i class="fas fa-check-circle"></i>
+                        ${escapeHtml(step0.message || 'Conversion complete.')}
+                    </div>`;
+            }
+        }
+
+        if (fileList) {
+            if (files.length === 0) {
+                fileList.innerHTML = '<p class="text-muted mb-0">No converted files yet.</p>';
+            } else {
+                fileList.innerHTML = files.map((file, index) => `
+                    <div class="file-item alert alert-success d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-file"></i> ${escapeHtml(file.name)}
+                            <span class="text-muted">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        </span>
+                        <a class="btn btn-sm btn-outline-success"
+                           href="/api/step0/file/${index}" download>
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                `).join('');
+            }
+        }
+    }
+
+    async handleStep0Upload(event) {
+        event.preventDefault();
+
+        const input = document.getElementById('step0-file-input');
+        const file = input?.files?.[0];
+        if (!file) {
+            this.showMessage('Please select a Bruker .zip archive first', 'warning');
+            return;
+        }
+        if (!file.name.toLowerCase().endsWith('.zip')) {
+            this.showMessage('Please upload a .zip archive of your Bruker data folder', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            this.showLoading('Uploading and extracting Bruker files...');
+
+            const response = await fetch('/api/step0/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            let result = {};
+            try {
+                result = await response.json();
+            } catch (e) {
+                result = {};
+            }
+            if (!response.ok) {
+                throw new Error(result.error || `Upload failed (${response.status})`);
+            }
+
+            this.updateStep0UI(result.step0);
+            this.showMessage(
+                `Bruker data uploaded: ${result.file_count} files extracted.`,
+                'success'
+            );
+        } catch (error) {
+            console.error('Step 0 upload error:', error);
+            this.showMessage(`Bruker upload failed: ${error.message}`, 'danger');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    async convertBruker() {
+        try {
+            this.showLoading('Converting Bruker spectra to .mzML... this can take a few minutes.');
+
+            const response = await fetch('/api/step0/convert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            let result = {};
+            try {
+                result = await response.json();
+            } catch (e) {
+                result = {};
+            }
+            if (!response.ok) {
+                throw new Error(result.error || `Conversion failed (${response.status})`);
+            }
+
+            this.updateStep0UI(result.step0);
+            this.showMessage(
+                `Conversion complete: ${result.step0.files.length} .mzML file(s) created.`,
+                'success'
+            );
+        } catch (error) {
+            console.error('Step 0 conversion error:', error);
+            this.showMessage(`Conversion failed: ${error.message}`, 'danger');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    async clearStep0() {
+        if (!confirm('Discard the uploaded Bruker data and converted .mzML files?')) {
+            return;
+        }
+
+        try {
+            this.showLoading('Clearing Step 0 files...');
+            const response = await fetch('/api/step0/clear', { method: 'POST' });
+            if (!response.ok) {
+                throw new Error(`Clear failed (${response.status})`);
+            }
+            const result = await response.json();
+            this.updateStep0UI(result.step0);
+
+            const input = document.getElementById('step0-file-input');
+            if (input) input.value = '';
+
+            this.showMessage('Step 0 files cleared', 'success');
+        } catch (error) {
+            console.error('Step 0 clear error:', error);
+            this.showMessage(`Could not clear Step 0 files: ${error.message}`, 'danger');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    skipStep0() {
+        this.currentStep = 1;
+        this.showStep(1);
+        this.updateProgress();
+        this.updateNavigation();
+    }
+
     updateFileList(files) {
         const fileList = document.getElementById('file-list');
         if (!fileList) return;
@@ -677,13 +944,17 @@ class SpecieScanApp {
             const result = await response.json();
             
             if (result.success) {
-                this.currentStep = 1;
+                this.currentStep = 0;
                 this.state = result.state;
-                this.spectraData = null;
-                this.currentSpectrumIndex = 0;
+                this.topSpectrumData = null;
+                this.bottomSpectrumData = null;
+                this.topSpectrumIndex = 0;
+                this.bottomSpectrumIndex = 1;
+                this.spectrumTotal = 0;
                 this.currentPeakIndex = 0;
+                resetReferenceDatabaseSelection();
                 
-                this.showStep(1);
+                this.showStep(0);
                 this.updateProgress();
                 this.updateNavigation();
                 this.showMessage('Workflow reset successfully', 'success');
@@ -699,49 +970,96 @@ class SpecieScanApp {
         }
     }
 
-    // Spectrum data loading and visualization
-    async loadSpectrumData(index) {
+    // Spectrum data loading and visualisation (Step 2 mirror view)
+    async fetchSpectrum(index) {
+        const response = await fetch(`/api/spectra/${index}`);
+        let data = null;
         try {
-            this.showLoading('Loading spectrum data...');
-            
-            const response = await fetch(`/api/spectra/${index}`);
-            
-            if (!response.ok) {
-                throw new Error(`Failed to load spectrum: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.error) {
-                console.error('API Error:', data.error);
-                if (data.hint) {
-                    console.error('Hint:', data.hint);
-                }
-                throw new Error(data.error);
-            }
-            
-            // Debug logging
-            if (data.success && data.mass && data.mass.length > 0) {
-                const sourceIcon = data.source === 'R' ? '✓' : '⚠';
-                const sourceText = data.source === 'R' ? 'REAL R data' : `${data.source} data`;
-                console.log(`${sourceIcon} Received ${sourceText} from API: ${data.metadata?.filename || 'Unknown'}`);
-                console.log(`  Mass range: ${arrayMin(data.mass).toFixed(1)} - ${arrayMax(data.mass).toFixed(1)}, ${data.mass.length} points`);
-            } else {
-                console.warn(`⚠ Received unexpected data format:`, data);
-            }
-            
-            this.spectraData = data;
-            this.currentSpectrumIndex = index;
-            this.plotSpectrum();
-            
+            data = await response.json();
         } catch (error) {
-            console.error('Error loading spectrum:', error);
-            this.showSpectrumError('Could Not Load Spectrum', error.message, false);
+            data = null;
+        }
+        if (!response.ok) {
+            throw new Error(data?.error || `Failed to load spectrum: ${response.status}`);
+        }
+        if (!data || data.error) {
+            throw new Error(data?.error || 'Unexpected spectrum response');
+        }
+        if (!data.mass || !data.intensity) {
+            throw new Error('Spectrum contains no mass/intensity data');
+        }
+        return data;
+    }
+
+    async loadMirrorSpectra() {
+        try {
+            this.showLoading('Loading spectra...');
+
+            let topIndex = Number.isInteger(this.topSpectrumIndex) ? this.topSpectrumIndex : 0;
+            let top;
+            try {
+                top = await this.fetchSpectrum(topIndex);
+            } catch (error) {
+                if (topIndex === 0) {
+                    throw error;
+                }
+                topIndex = 0;
+                top = await this.fetchSpectrum(0);
+            }
+            this.spectrumTotal = top.total || 1;
+
+            let bottomIndex = Number.isInteger(this.bottomSpectrumIndex) ? this.bottomSpectrumIndex : 1;
+            if (bottomIndex < 0 || bottomIndex >= this.spectrumTotal) {
+                bottomIndex = this.spectrumTotal > 1 ? 1 : 0;
+            }
+
+            this.topSpectrumIndex = topIndex;
+            this.topSpectrumData = top;
+
+            if (bottomIndex === topIndex) {
+                this.bottomSpectrumIndex = bottomIndex;
+                this.bottomSpectrumData = top;
+            } else {
+                this.bottomSpectrumIndex = bottomIndex;
+                this.bottomSpectrumData = await this.fetchSpectrum(bottomIndex);
+            }
+
+            console.log(`Mirror view: top spectrum #${this.topSpectrumIndex + 1}, ` +
+                        `bottom spectrum #${this.bottomSpectrumIndex + 1} of ${this.spectrumTotal}`);
+            this.plotMirrorSpectra();
+
+        } catch (error) {
+            console.error('Error loading spectra:', error);
+            this.showSpectrumError('Could Not Load Spectra', error.message, true);
         } finally {
             this.hideLoading();
         }
     }
-    
+
+    async loadSpectrumSide(side, index) {
+        try {
+            this.showLoading(`Loading ${side} spectrum...`);
+            const data = await this.fetchSpectrum(index);
+            this.spectrumTotal = data.total || this.spectrumTotal || 1;
+
+            if (side === 'top') {
+                this.topSpectrumIndex = index;
+                this.topSpectrumData = data;
+            } else {
+                this.bottomSpectrumIndex = index;
+                this.bottomSpectrumData = data;
+            }
+
+            this.plotMirrorSpectra();
+
+        } catch (error) {
+            console.error(`Error loading ${side} spectrum:`, error);
+            this.showMessage(`Could not load ${side} spectrum: ${error.message}`, 'danger');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
     async loadPeakData(index) {
         try {
             this.showLoading('Loading peak data...');
@@ -770,20 +1088,19 @@ class SpecieScanApp {
         }
     }
 
-    // Spectrum navigation methods
-    previousSpectrum() {
-        const totalFiles = this.state.uploadedFiles?.length || (this.spectraData?.total || 1);
-        if (this.currentSpectrumIndex > 0) {
-            this.currentSpectrumIndex--;
-            this.loadSpectrumData(this.currentSpectrumIndex);
+    // Spectrum navigation methods (each side is independent)
+    previousSpectrum(side = 'top') {
+        const index = side === 'top' ? this.topSpectrumIndex : this.bottomSpectrumIndex;
+        if (index > 0) {
+            this.loadSpectrumSide(side, index - 1);
         }
     }
 
-    nextSpectrum() {
-        const totalFiles = this.state.uploadedFiles?.length || (this.spectraData?.total || 1);
-        if (this.currentSpectrumIndex < totalFiles - 1) {
-            this.currentSpectrumIndex++;
-            this.loadSpectrumData(this.currentSpectrumIndex);
+    nextSpectrum(side = 'top') {
+        const total = this.spectrumTotal || 1;
+        const index = side === 'top' ? this.topSpectrumIndex : this.bottomSpectrumIndex;
+        if (index < total - 1) {
+            this.loadSpectrumSide(side, index + 1);
         }
     }
 
@@ -860,6 +1177,16 @@ class SpecieScanApp {
         try {
             const response = await fetch(`/api/peaks/${index}`);
             
+            if (response.status === 400) {
+                const errorData = await response.json().catch(() => ({}));
+                const message = errorData.error || '';
+                if (message.includes('No peaks detected')) {
+                    this.showPeaksPrompt();
+                    return;
+                }
+                throw new Error(message || `Failed to load peaks: ${response.status}`);
+            }
+
             if (!response.ok) {
                 throw new Error(`Failed to load peaks: ${response.status}`);
             }
@@ -943,70 +1270,164 @@ class SpecieScanApp {
         Plotly.newPlot('peaks-plot', [spectrumTrace, peaksTrace], layout, {responsive: true});
     }
 
-    // Plotting methods
-    plotSpectrum() {
+    // Plotting methods (Step 2 mirror view)
+    updateSpectrumToolbar(side, data, total) {
+        const filenameDiv = document.getElementById(`${side}-spectrum-filename`);
+        const counterDiv = document.getElementById(`${side}-spectrum-counter`);
+        const prevBtn = document.getElementById(`prev-${side}-spectrum`);
+        const nextBtn = document.getElementById(`next-${side}-spectrum`);
+
+        const filename = data.metadata?.filename || `Spectrum ${data.index + 1}`;
+
+        if (filenameDiv) {
+            filenameDiv.innerHTML = `<i class="fas fa-file"></i> ${escapeHtml(filename)}`;
+        }
+        if (counterDiv) {
+            counterDiv.textContent = `Spectrum ${data.index + 1} of ${total}`;
+        }
+        if (prevBtn) {
+            prevBtn.disabled = data.index <= 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = data.index >= total - 1;
+        }
+    }
+
+    plotMirrorSpectra() {
         const plotDiv = document.getElementById('spectrum-plot');
-        const counterDiv = document.getElementById('spectrum-counter');
-        const filenameDiv = document.getElementById('spectrum-filename');
         const dataSourceDiv = document.getElementById('spectrum-data-source');
-        
+
         if (!plotDiv) return;
-        
-        if (!this.spectraData || !this.spectraData.mass || !this.spectraData.intensity) {
-            this.showSpectrumError('No Spectrum Data', 'The spectrum could not be displayed.');
+
+        const top = this.topSpectrumData;
+        const bottom = this.bottomSpectrumData;
+
+        if (!top || !top.mass || !top.intensity || top.mass.length === 0 ||
+            !bottom || !bottom.mass || !bottom.intensity || bottom.mass.length === 0) {
+            this.showSpectrumError('No Spectrum Data', 'The spectra could not be displayed.');
             return;
         }
-        
-        const mass = this.spectraData.mass;
-        const intensity = this.spectraData.intensity;
-        const filename = this.spectraData.metadata?.filename || `Spectrum ${this.currentSpectrumIndex + 1}`;
-        
-        if (counterDiv) {
-            counterDiv.textContent = `Spectrum ${this.spectraData.index + 1} of ${this.spectraData.total}`;
-        }
-        
-        if (filenameDiv) {
-            filenameDiv.innerHTML = `<i class="fas fa-file"></i> ${filename}`;
-        }
-        
+
+        const total = this.spectrumTotal || top.total || 1;
+        this.updateSpectrumToolbar('top', top, total);
+        this.updateSpectrumToolbar('bottom', bottom, total);
+
         if (dataSourceDiv) {
             dataSourceDiv.className = 'badge bg-success';
             dataSourceDiv.innerHTML = '<i class="fas fa-check-circle"></i> R Data';
         }
-        
-        console.log(`✓ Plotting REAL R data: ${filename} (${mass.length} mass points)`);
-        
-        const trace = {
-            x: mass,
-            y: intensity,
+
+        const topName = top.metadata?.filename || `Spectrum ${top.index + 1}`;
+        const bottomName = bottom.metadata?.filename || `Spectrum ${bottom.index + 1}`;
+
+        // Independent intensity scale for each panel, with a little headroom.
+        const topMax = Math.max(arrayMax(top.intensity), 1e-12);
+        const bottomMax = Math.max(arrayMax(bottom.intensity), 1e-12);
+
+        // Both panels use one common m/z range, computed from the union.
+        const xMin = Math.min(arrayMin(top.mass), arrayMin(bottom.mass));
+        const xMax = Math.max(arrayMax(top.mass), arrayMax(bottom.mass));
+        const xPad = (xMax - xMin) * 0.01 || 1;
+        const xRange = [xMin - xPad, xMax + xPad];
+
+        console.log(`Mirror plot: top ${topName} (${top.mass.length} points), ` +
+                    `bottom ${bottomName} (${bottom.mass.length} points)`);
+
+        const topTrace = {
+            x: top.mass,
+            y: top.intensity,
             mode: 'lines',
             type: 'scatter',
             line: {
                 color: THEME.line,
                 width: 1
             },
-            name: 'Intensity'
+            name: `Top: ${topName}`,
+            hovertemplate: '%{x:.1f} m/z<br>Intensity: %{y:.4g}<extra>Top</extra>'
         };
-        
+
+        const bottomTrace = {
+            x: bottom.mass,
+            // The bottom panel is mirrored by reversing its Y axis below.
+            // Keeping positive values means every tick label stays positive.
+            y: bottom.intensity,
+            mode: 'lines',
+            type: 'scatter',
+            xaxis: 'x2',
+            yaxis: 'y2',
+            line: {
+                color: THEME.current,
+                width: 1
+            },
+            name: `Bottom (mirrored): ${bottomName}`,
+            hovertemplate: '%{x:.1f} m/z<br>Intensity: %{y:.4g}<extra>Bottom (mirrored)</extra>'
+        };
+
         const layout = {
-            title: filename,
             xaxis: {
-                title: 'Mass (m/z)',
+                domain: [0, 1],
+                anchor: 'y',
+                range: xRange,
+                showticklabels: false,
                 showgrid: true,
-                gridcolor: THEME.grid
+                gridcolor: THEME.grid,
+                zeroline: false,
+                showline: false
             },
             yaxis: {
+                domain: [0.5, 1],
                 title: 'Intensity',
+                range: [0, topMax * 1.08],
                 showgrid: true,
-                gridcolor: THEME.grid
+                gridcolor: THEME.grid,
+                zeroline: false,
+                automargin: true
             },
+            xaxis2: {
+                domain: [0, 1],
+                anchor: 'y2',
+                range: xRange,
+                title: 'Mass (m/z)',
+                matches: 'x',
+                showgrid: true,
+                gridcolor: THEME.grid,
+                zeroline: false
+            },
+            yaxis2: {
+                domain: [0, 0.5],
+                title: 'Intensity (mirrored)',
+                // Reversed range: 0 at the shared baseline, maximum downwards.
+                range: [bottomMax * 1.08, 0],
+                showgrid: true,
+                gridcolor: THEME.grid,
+                zeroline: false,
+                automargin: true
+            },
+            shapes: [{
+                type: 'line',
+                xref: 'paper',
+                x0: 0,
+                x1: 1,
+                yref: 'paper',
+                y0: 0.5,
+                y1: 0.5,
+                line: {
+                    color: THEME.accent,
+                    width: 1.5
+                }
+            }],
             plot_bgcolor: THEME.bg,
             paper_bgcolor: THEME.bg,
             font: { color: THEME.text },
-            margin: { t: 40, r: 20, b: 40, l: 60 }
+            margin: { t: 30, r: 20, b: 50, l: 70 },
+            showlegend: false,
+            hovermode: 'closest'
         };
-        
-        Plotly.newPlot('spectrum-plot', [trace], layout, {responsive: true});
+
+        Plotly.newPlot('spectrum-plot', [topTrace, bottomTrace], layout, {
+            responsive: true,
+            displaylogo: false
+        });
     }
 
     async updateSNRPlot() {
@@ -1073,7 +1494,7 @@ class SpecieScanApp {
             const maxNoise = noise.length ? arrayMax(noise) : 0;
             const thresholdMax = maxNoise * snrValue;
             const filename = data.filename || `Spectrum ${index + 1}`;
-            const sourceNote = data.source === 'raw' ? ' — raw spectrum (run Step 4 to preprocess)' : '';
+            const sourceNote = data.source === 'raw' ? ' — raw spectrum (run Step 4 to pre-process)' : '';
 
             const massMinInput = document.getElementById('snr-mass-min');
             const massMaxInput = document.getElementById('snr-mass-max');
@@ -1228,6 +1649,36 @@ class SpecieScanApp {
     }
 }
 
+// Keep the Step 9 custom/default controls visually in sync.
+function syncReferenceDatabaseSelection() {
+    const customRadio = document.getElementById('reference-db-custom');
+    const fileInput = document.getElementById('reference-db-file');
+
+    const customMode = !!customRadio?.checked;
+
+    if (fileInput && !customMode) {
+        fileInput.value = '';
+    }
+}
+
+// Reset the Step 9 reference database controls to the default choice.
+function resetReferenceDatabaseSelection() {
+    const defaultRadio = document.getElementById('reference-db-default');
+    if (defaultRadio) defaultRadio.checked = true;
+
+    const fileInput = document.getElementById('reference-db-file');
+    if (fileInput) fileInput.value = '';
+
+    syncReferenceDatabaseSelection();
+
+    const resultsDiv = document.getElementById('python-results');
+    if (resultsDiv) resultsDiv.innerHTML = '';
+
+    if (window.speciesIdentificationResults) {
+        window.speciesIdentificationResults = null;
+    }
+}
+
 // Global function for clearing files
 window.clearFiles = async function() {
     if (!confirm('Are you sure you want to clear all uploaded files?')) {
@@ -1247,8 +1698,12 @@ window.clearFiles = async function() {
         
         if (result.success) {
             window.app.state.uploadedFiles = [];
-            window.app.spectraData = null;
-            window.app.currentSpectrumIndex = 0;
+            window.app.topSpectrumData = null;
+            window.app.bottomSpectrumData = null;
+            window.app.topSpectrumIndex = 0;
+            window.app.bottomSpectrumIndex = 1;
+            window.app.spectrumTotal = 0;
+            resetReferenceDatabaseSelection();
             
             const fileList = document.getElementById('file-list');
             if (fileList) {
@@ -1322,8 +1777,8 @@ window.runQualityControl = async function() {
 };
 
 window.runPreprocessing = async function() {
-    console.log('Running preprocessing...');
-    window.app.showLoading('Applying preprocessing steps...');
+    console.log('Running pre-processing...');
+    window.app.showLoading('Applying pre-processing steps...');
     
     try {
         const response = await fetch('/api/step/4', {
@@ -1342,13 +1797,13 @@ window.runPreprocessing = async function() {
         }
         
         window.app.hideLoading();
-        window.app.showMessage(result.message || 'Preprocessing completed', 'success');
+        window.app.showMessage(result.message || 'Pre-processing completed', 'success');
         window.app.state.processingData.step_4_data = result;
         
     } catch (error) {
         window.app.hideLoading();
-        console.error('Preprocessing error:', error);
-        window.app.showMessage(`Preprocessing error: ${error.message}`, 'danger');
+        console.error('Pre-processing error:', error);
+        window.app.showMessage(`Pre-processing error: ${error.message}`, 'danger');
     }
 };
 
@@ -1389,6 +1844,7 @@ window.resetSNRZoom = function() {
 window.runPeakPicking = async function() {
     console.log('Running peak picking...');
     window.app.showLoading('Detecting and deisotoping peaks...');
+    window.app.showPeaksLoading();
     
     const params = {
         snr: parseFloat(document.getElementById('peak-snr')?.value) || 3.5,
@@ -1417,6 +1873,7 @@ window.runPeakPicking = async function() {
         
         window.app.showMessage(result.message || 'Peak picking completed', 'success');
         window.app.state.processingData.step_6_data = result;
+        window.app.state.processingData.step_6_status = result.status || 'completed';
         
         // Update peak display with the real detected peaks
         window.app.currentPeaksSpectrumIndex = 0;
@@ -1728,31 +2185,64 @@ window.exportResults = function() {
 
 window.runPythonAnalysis = async function() {
     console.log('Running Python analysis...');
-    window.app.showLoading('Running species identification for all samples...');
-    
+
+    const modeInput = document.querySelector('input[name="reference-db-mode"]:checked');
+    const mode = modeInput?.value || 'default';
     const dbSelect = document.getElementById('reference-db');
-    const selectedDb = dbSelect?.options[dbSelect.selectedIndex]?.text || 'Eurasia Mammals';
-    
+    const fileInput = document.getElementById('reference-db-file');
+    const selectedDb = dbSelect?.options[dbSelect.selectedIndex]?.text?.trim() || 'Eurasia Mammals';
+
+    let selectedFile = null;
+    if (mode === 'custom') {
+        selectedFile = fileInput?.files?.[0] || null;
+        if (!selectedFile) {
+            window.app.showMessage(
+                'Choose a reference database CSV file, or switch to a default database.',
+                'danger'
+            );
+            if (fileInput) fileInput.focus();
+            return;
+        }
+    }
+
+    window.app.showLoading('Running species identification for all samples...');
+
     try {
+        const formData = new FormData();
+        formData.append('reference_mode', mode);
+        if (mode === 'custom') {
+            formData.append('reference_db', selectedFile);
+        } else {
+            formData.append('reference_db_key', dbSelect?.value || 'eurasia_mammals');
+        }
+
         // Call API to get species identification results for all samples
         const response = await fetch('/api/step/9', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            body: formData
         });
-        
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+
+        let result = null;
+        try {
+            result = await response.json();
+        } catch (parseError) {
+            result = null;
         }
-        
-        const result = await response.json();
-        
-        if (result.error) {
-            throw new Error(result.error);
+
+        if (!response.ok) {
+            throw new Error(result?.error || `Server error: ${response.status}`);
+        }
+        if (!result) {
+            throw new Error('The server returned an empty response.');
+        }
+        if (result.error || result.status === 'error') {
+            throw new Error(result.error || result.message || 'Species identification failed.');
         }
         
         window.app.hideLoading();
         window.app.showMessage(result.message || 'Species identification completed', 'success');
         window.app.state.processingData.step_9_data = result;
+        window.speciesIdentificationResults = result;
         
         const resultsDiv = document.getElementById('python-results');
         if (resultsDiv) {
@@ -1763,21 +2253,35 @@ window.runPythonAnalysis = async function() {
         window.app.hideLoading();
         console.error('Species identification error:', error);
         window.app.showMessage(`Error: ${error.message}`, 'danger');
+
+        const resultsDiv = document.getElementById('python-results');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Species Identification Failed</h5>
+                    <p class="mb-0">${escapeHtml(error.message)}</p>
+                </div>
+            `;
+        }
     }
 };
 
 function displayAllSampleResults(result, databaseName, resultsDiv) {
     const sampleResults = result.sample_results || {};
     const totalSamples = result.total_samples || Object.keys(sampleResults).length;
+    const databaseLabel = result.reference_database || databaseName;
+    const databaseSource = result.reference_source === 'custom'
+        ? '<span class="badge bg-info">Custom upload</span>'
+        : '<span class="badge bg-secondary">SpecieScan 2024</span>';
     
     let html = `
         <div class="alert alert-success mb-4">
             <h5><i class="fas fa-dna"></i> Species Identification Completed</h5>
-            <p><strong>Reference Database:</strong> ${result.reference_database || databaseName}</p>
-            <p><strong>Total Samples Analyzed:</strong> ${totalSamples}</p>
+            <p><strong>Reference Database:</strong> ${escapeHtml(databaseLabel)} ${databaseSource}</p>
+            <p><strong>Total Samples Analysed:</strong> ${totalSamples}</p>
         </div>
         
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h5>Results by Sample</h5>
             <button class="btn btn-success" onclick="exportResultsToCSV()">
                 <i class="fas fa-file-csv"></i> Export All Results to CSV
@@ -1823,7 +2327,7 @@ function displayAllSampleResults(result, databaseName, resultsDiv) {
             html += `
                 <tr class="${rowClass}">
                     <td><strong>${match.rank}</strong></td>
-                    <td><code>${match.ZooMS_taxon}</code></td>
+                    <td><code class="zooms-taxon">${match.ZooMS_taxon}</code></td>
                     <td><em>${match.species}</em></td>
                     <td>${match.family}</td>
                     <td>${match.order}</td>
@@ -1913,6 +2417,19 @@ window.exportResultsToCSV = function() {
     document.body.removeChild(link);
     
     window.app.showMessage('Results exported to CSV successfully', 'success');
+};
+
+// Step 0 buttons (defined in the HTML with inline onclick handlers)
+window.convertBruker = function() {
+    return window.app.convertBruker();
+};
+
+window.clearStep0 = function() {
+    return window.app.clearStep0();
+};
+
+window.skipStep0 = function() {
+    return window.app.skipStep0();
 };
 
 // Initialize the application when DOM is ready

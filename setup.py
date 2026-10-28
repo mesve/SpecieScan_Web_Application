@@ -11,7 +11,7 @@ long_description = readme_file.read_text() if readme_file.exists() else "SpecieS
 
 setup(
     name="specie-scan-web",
-    version="3.0.0",
+    version="4.2.0",
     description="Web-based interface for ZooMS (Zooarchaeology Mass Spectrometry) analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -21,7 +21,13 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        '': ['static/css/*.css', 'static/js/*.js', 'templates/*.html'],
+        '': [
+            'static/css/*.css',
+            'static/js/*.js',
+            'templates/*.html',
+            'reference_databases/*.csv',
+            'reference_databases/*.md',
+        ],
     },
     install_requires=[
         'Flask>=2.3.0',

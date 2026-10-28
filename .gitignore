@@ -20,6 +20,12 @@ static/uploads/*
 downloads/*
 !downloads/.gitkeep
 
+# Optional Step 0 conversion workspace
+step0_work/
+
+# Step 9 custom reference database workspace
+step9_work/
+
 # macOS
 .DS_Store
 .AppleDouble
