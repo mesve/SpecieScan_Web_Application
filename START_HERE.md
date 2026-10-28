@@ -15,7 +15,7 @@ You do **not** need to type any commands. When a black **Terminal** window opens
 - Use a Mac with macOS 11 or newer.
 - Keep the SpecieScan folder on your **Desktop** and do not rename or move it afterwards.
 - Your spectra are processed **on your own Mac**. Nothing is uploaded to an external server.
-- If you were given a ZIP file by the workshop organiser, skip to Step 2.
+
 
 ---
 
@@ -27,7 +27,7 @@ You do **not** need to type any commands. When a black **Terminal** window opens
 3. In your **Downloads** folder, double-click the ZIP file to unpack it.
 4. Drag the unpacked folder to your **Desktop** and open it. You should see files named `1-Install-SpecieScan.command`, `2-Start-SpecieScan.command`, `app.py`, `sample_data`, and others.
 
-> If the page says “Not Found”, the repository is private. Ask the organiser for access or for the ZIP file.
+> If the page says “Not Found”, the repository is private (and not published yet). 
 
 ---
 
@@ -84,7 +84,7 @@ What happens next:
 
 If a dialog says Python or R is missing, install the missing program from Step 2 or 3, then double-click `1-Install-SpecieScan.command` again.
 
-If something fails, the file `setup_log.txt` in the SpecieScan folder records what happened. Send it to the developer.
+If something fails, the file `setup_log.txt` in the SpecieScan folder records what happened. Send it to me.
 
 > **If double-clicking opens a text document instead of Terminal:** right-click the file → **Open With → Terminal**, or right-click → **Open** and confirm.
 
@@ -160,7 +160,7 @@ You do **not** repeat Steps 2–4. Just:
 
 ---
 
-## Frequently asked questions
+## Q&A
 
 **Are my files uploaded to the internet?**
 No. The application runs locally on your Mac. Your `.mzML` files stay on your computer. Only the page styling/chart libraries are downloaded from the internet.
@@ -172,7 +172,7 @@ In the `static/uploads` folder inside the SpecieScan folder. They are deleted ev
 Yes during installation. While using the application, the interface loads Bootstrap, Plotly and Font Awesome from the internet, so charts and styling need a connection.
 
 **Can I use Windows?**
-This guide is macOS-only. Ask the developer for the Windows instructions.
+This guide is macOS-only. 
 
 **Can several people use one installation?**
 Each person should have their own copy of the folder on their own Mac.
