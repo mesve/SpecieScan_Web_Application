@@ -14,9 +14,6 @@ version: "4.2.0"
 date-released: "2026-10-20"
 identifiers:
   - type: doi
-    value: "10.5281/zenodo.23495280"
-    description: "SpecieScan Web Application (Zenodo)"
-  - type: doi
     value: "10.5281/zenodo.8055426"
     description: "Underlying SpecieScan algorithm code archive (Zenodo)"
 references:
