@@ -74,7 +74,7 @@ First check your Mac type: open the **Apple menu → About This Mac** and look a
 1. Open the SpecieScan folder on your Desktop.
 2. **Right-click** (or Control-click) `1-Install-SpecieScan.command`.
 3. Choose **Open**.
-4. A warning may appear that the file is from an unidentified developer. Click **Open** again.
+4. A warning may appear that the file is from an unidentified developer. Click **Open** again. If your Mac does not allow you to open it, go to 'System Settings' --> Privacy & Security --> scroll down to the Security section --> you should see a message that the file was blocked, with a button 'Open anyway' next to it --> click open anyway --> enter your password. 
 5. A **Terminal** window opens and starts working by itself. **Do not type anything and do not close the window.**
 
 What happens next:
