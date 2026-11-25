@@ -274,7 +274,6 @@ If you use SpecieScan in your research, please cite:
 
 Please also cite the web application and the underlying algorithm code archive:
 
-> Web application DOI: [10.5281/zenodo.23495280](https://doi.org/10.5281/zenodo.23495280)
 
 > Algorithm DOI: [10.5281/zenodo.8055426](https://doi.org/10.5281/zenodo.8055426)
 
@@ -296,6 +295,6 @@ Dr Emese Végh — [mesve3@gmail.com](mailto:mesve3@gmail.com)
 
 ## Acknowledgements
 
-- Much of the pre-processing steps of the code was adapted from Codlin MC, Douka K, Richter KK (2022). An application of zooms to identify archaeological avian fauna from Teotihuacan, Mexico. Journal of Archaeological Science;148:105692.
+- Much of the pre-processing steps of the code was adapted from Codlin MC, Douka K, Richter KK (2022). An application of zooms to identify archaeological avian fauna from Teotihuacan, Mexico. Journal of Archaeological Science;148:105692. 
 - The MALDIquant and MALDIquantForeign developers for the R mass-spectrometry packages.
 - Plotly.js, Bootstrap and Font Awesome for the interactive interface.
